@@ -1,10 +1,4 @@
-# MGL Makefile - CYGWIN | LINUX
-
-# Automatically generate variable name lists
-CGRAPH_SOURCES = $(wildcard source/*.cpp)
-
-# Convert the .cpp files to .o files
-OBJGRAPH_SOURCES = $(CGRAPH_SOURCES:.cpp=.o)
+# MML Makefile - CYGWIN | LINUX
 
 # Include directories
 LIB_SOURCES = -Isource/math
@@ -36,10 +30,6 @@ uninstall:
 	rm -rI $(MML_PATH)
 tests:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) -Itest $(PARAMS) $(TEST) -o bin/test 2> "gcc.txt"
-
-# pattern matching .cpp
-%.o: %.cpp
-	g++ $(LIB_SOURCES) $(PARAMS) -c $< -o $@ 2> "gcc.txt"
 
 # clean targets
 clean: clean_junk clean_tests
