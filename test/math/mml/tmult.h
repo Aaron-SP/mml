@@ -1,0 +1,85 @@
+/* Copyright [2013-2016] [Aaron Springstroh, Minimal Math Library]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#ifndef __TESTMULTIPLY__
+#define __TESTMULTIPLY__
+
+#include <mml/mat.h>
+#include <mml/mult.h>
+#include <mml/test.h>
+#include <mml/vec.h>
+#include <stdexcept>
+
+bool test_matrix_multiply()
+{
+    bool out = true;
+
+    // Test matrix operations
+    mml::matrix<double, 2, 3> m1;
+    mml::matrix<double, 3, 2> m2;
+
+    // set m1 for matrix-matrix multiplication test
+    m1.get(0, 0) = 1.0;
+    m1.get(0, 1) = 2.0;
+    m1.get(0, 2) = 3.0;
+    m1.get(1, 0) = 4.0;
+    m1.get(1, 1) = 5.0;
+    m1.get(1, 2) = 6.0;
+
+    // set m2 for matrix-matrix multiplication test
+    m2.get(0, 0) = 7.0;
+    m2.get(0, 1) = 8.0;
+    m2.get(1, 0) = 9.0;
+    m2.get(1, 1) = 10.0;
+    m2.get(2, 0) = 11.0;
+    m2.get(2, 1) = 12.0;
+
+    // multiply matrices
+    mml::matrix<double, 2, 2> m3 = mml::multiply<double, 2, 3, 3, 2>(m1, m2);
+    out = out && compare(58.0, m3.get(0, 0), 1E-4);
+    out = out && compare(64.0, m3.get(0, 1), 1E-4);
+    out = out && compare(139.0, m3.get(1, 0), 1E-4);
+    out = out && compare(154.0, m3.get(1, 1), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed matrix multiply");
+    }
+
+    // set m1 for vector-matrix multiplication test
+    m1.get(0, 0) = 1.0;
+    m1.get(0, 1) = -1.0;
+    m1.get(0, 2) = 2.0;
+    m1.get(1, 0) = 0.0;
+    m1.get(1, 1) = -3.0;
+    m1.get(1, 2) = 1.0;
+
+    // set v1 for vector-matrix multiplication test
+    mml::vector<double, 3> v1;
+    v1[0] = 2;
+    v1[1] = 1;
+    v1[2] = 0;
+
+    // Test vector-matrix multiplication
+    mml::vector<double, 2> v2 = mml::multiply<double, 2, 3>(m1, v1);
+    out = out && compare(1.0, v2[0], 1E-4);
+    out = out && compare(-3.0, v2[1], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed vector-matrix multiply");
+    }
+
+    return out;
+}
+
+#endif
