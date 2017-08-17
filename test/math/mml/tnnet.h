@@ -120,16 +120,16 @@ bool test_neural_net()
         throw std::runtime_error("Failed net calculate output random");
     }
 
-    // Breed randomized net
+    // Test inbreeding
     cached_output = output;
     net2 = mml::nnet<double, 3, 3>::breed(net2, net2);
     output = net2.calculate();
-    out = out && !compare(cached_output[0], output[0], 1E-4);
-    out = out && !compare(cached_output[1], output[1], 1E-4);
-    out = out && !compare(cached_output[2], output[2], 1E-4);
+    out = out && compare(cached_output[0], output[0], 1E-4);
+    out = out && compare(cached_output[1], output[1], 1E-4);
+    out = out && compare(cached_output[2], output[2], 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed net calculate output random breed");
+        throw std::runtime_error("Failed net calculate inbreeding");
     }
 
     // Mutate the neural net

@@ -44,14 +44,34 @@ class nnode
     nnode(const T weight, const T bias) : _weight(weight), _bias(bias), _output(0.0) {}
     nnode<T> operator*(const nnode<T> &n) const
     {
-        const T w = _weight * n._weight;
-        const T b = _bias + n._bias;
+        const T product = std::abs(_weight * n._weight);
+
+        // Negative weights are dominant
+        T sign = 1.0;
+        if (_weight < 0.0 || n._weight < 0.0)
+        {
+            sign = -1.0;
+        }
+
+        // geometric mean and average
+        const T w = sign * std::sqrt(product);
+        const T b = (_bias + n._bias) * 0.5;
         return nnode<T>(w, b);
     }
     nnode<T> &operator*=(const nnode<T> &n)
     {
-        _weight *= n._weight;
-        _bias += n._bias;
+        const T product = std::abs(_weight * n._weight);
+
+        // Negative weights are dominant
+        T sign = 1.0;
+        if (_weight < 0.0 || n._weight < 0.0)
+        {
+            sign = -1.0;
+        }
+
+        // geometric mean and average
+        _weight = sign * std::sqrt(product);
+        _bias = (_bias + n._bias) * 0.5;
         return *this;
     }
     T get_bias() const
