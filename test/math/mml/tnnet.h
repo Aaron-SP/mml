@@ -30,6 +30,7 @@ bool test_neural_net()
     in[1] = 4.0;
     in[2] = 5.0;
     mml::vector<double, 3> output;
+    mml::vector<double, 3> cached_output;
     mml::nnet<double, 3, 3> net;
     mml::nnet<double, 3, 3> net2;
     net.add_layer(5);
@@ -108,33 +109,36 @@ bool test_neural_net()
     }
 
     // Try to randomize the net
+    cached_output = output;
     net2.randomize();
     output = net2.calculate();
-    out = out && !compare(2.0, output[0], 1E-4);
-    out = out && !compare(2.0, output[1], 1E-4);
-    out = out && !compare(2.0, output[2], 1E-4);
+    out = out && !compare(cached_output[0], output[0], 1E-4);
+    out = out && !compare(cached_output[1], output[1], 1E-4);
+    out = out && !compare(cached_output[2], output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output random");
     }
 
     // Breed randomized net
+    cached_output = output;
     net2 = mml::nnet<double, 3, 3>::breed(net2, net2);
     output = net2.calculate();
-    out = out && !compare(2.0, output[0], 1E-4);
-    out = out && !compare(2.0, output[1], 1E-4);
-    out = out && !compare(2.0, output[2], 1E-4);
+    out = out && !compare(cached_output[0], output[0], 1E-4);
+    out = out && !compare(cached_output[1], output[1], 1E-4);
+    out = out && !compare(cached_output[2], output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output random breed");
     }
 
     // Mutate the neural net
+    cached_output = output;
     net2.mutate();
     output = net2.calculate();
-    out = out && !compare(2.0, output[0], 1E-4);
-    out = out && !compare(2.0, output[1], 1E-4);
-    out = out && !compare(2.0, output[2], 1E-4);
+    out = out && !compare(cached_output[0], output[0], 1E-4);
+    out = out && !compare(cached_output[1], output[1], 1E-4);
+    out = out && !compare(cached_output[2], output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output random breed mutate");
@@ -148,6 +152,31 @@ bool test_neural_net()
     if (!out)
     {
         throw std::runtime_error("Failed net input unchanged");
+    }
+
+    // Test serialize neural net
+    std::vector<double> data = net2.serialize();
+    out = out && compare(30, data.size());
+    if (!out)
+    {
+        throw std::runtime_error("Failed net serialize");
+    }
+
+    // Cache old result
+    cached_output = output;
+
+    // Test deserialize neural net
+    mml::nnet<double, 3, 3> net3;
+    net3.deserialize(data);
+    net3.set_input(in);
+    output = net3.calculate();
+
+    out = out && compare(cached_output[0], output[0], 1E-4);
+    out = out && compare(cached_output[1], output[1], 1E-4);
+    out = out && compare(cached_output[2], output[2], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net deserialize calculate");
     }
 
     // return result

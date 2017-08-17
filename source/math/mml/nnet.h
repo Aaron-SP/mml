@@ -54,6 +54,14 @@ class nnode
         _bias += n._bias;
         return *this;
     }
+    T get_bias() const
+    {
+        return _bias;
+    }
+    T get_weight() const
+    {
+        return _weight;
+    }
     T output() const
     {
         return _output;
@@ -78,6 +86,20 @@ class nnet
     bool _final;
 
     void on_net(const std::function<void(nnode<T> &, const size_t, const size_t)> &f)
+    {
+        // For all net layers
+        const size_t layers = _layers.size();
+        for (size_t i = 0; i < layers; i++)
+        {
+            // For all layer nodes
+            const size_t nodes = _layers[i].size();
+            for (size_t j = 0; j < nodes; j++)
+            {
+                f(_layers[i][j], i, j);
+            }
+        }
+    }
+    void on_const_net(const std::function<void(const nnode<T> &, const size_t, const size_t)> &f) const
     {
         // For all net layers
         const size_t layers = _layers.size();
@@ -256,6 +278,84 @@ class nnet
     void set_input(const vector<T, IN> &input)
     {
         _input = input;
+    }
+    std::vector<T> serialize() const
+    {
+        std::vector<T> out;
+
+        // Serial net dimensions
+        out.push_back((T)IN);
+        out.push_back((T)OUT);
+        out.push_back((T)_layers.size());
+
+        // Serialize layer sizes
+        const size_t size = _layers.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            out.push_back((T)_layers[i].size());
+        }
+
+        // Serialize net data
+        const auto f = [&out](const nnode<T> &node, const size_t i, const size_t j) {
+            out.push_back(node.get_weight());
+            out.push_back(node.get_bias());
+        };
+
+        // Randomize the net
+        on_const_net(f);
+
+        return out;
+    }
+    void deserialize(const std::vector<T> &data)
+    {
+        // Use int here, in case someone feeds in garbage data
+        // Check input size
+        const int in = (int)data[0];
+        if (in != IN)
+        {
+            throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(IN) + "' but got '" + std::to_string(in) + "'");
+        }
+
+        // Check output size
+        const int out = (int)data[1];
+        if (out != OUT)
+        {
+            throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(OUT) + "' but got '" + std::to_string(out) + "'");
+        }
+
+        // Clear the layers
+        _layers.clear();
+        int count = 0;
+        const int size = (int)data[2];
+        for (int i = 0; i < size; i++)
+        {
+            // Add layers of length
+            const int length = (int)data[3 + i];
+            this->add_layer(length);
+
+            // Count nodes
+            count += length;
+        }
+
+        // Check that the number of nodes makes sense
+        const size_t left = data.size() - 3 - size;
+        if (count * 2.0 != left)
+        {
+            throw std::runtime_error("nnet: can't deserialize node mismatch");
+        }
+
+        // Starting index, assign values to net
+        size_t index = 3 + size;
+        const auto f = [&data, &index](nnode<T> &node, const size_t i, const size_t j) {
+            node = nnode<T>(data[index], data[index + 1]);
+            index += 2;
+        };
+
+        // Randomize the net
+        on_net(f);
+
+        // Finalize this network
+        _final = true;
     }
 };
 }
