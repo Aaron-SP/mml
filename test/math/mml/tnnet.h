@@ -60,9 +60,18 @@ bool test_neural_net()
         throw std::runtime_error("Failed net calculate layer 2");
     }
 
-    out = out && compare(10.0, output[0], 1E-4);
-    out = out && compare(10.0, output[1], 1E-4);
-    out = out && compare(10.0, output[2], 1E-4);
+    // Test last layer of net
+    out = out && compare(2.0, net.get_node(2, 0), 1E-4);
+    out = out && compare(2.0, net.get_node(2, 1), 1E-4);
+    out = out && compare(2.0, net.get_node(2, 2), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net calculate layer 2");
+    }
+
+    out = out && compare(2.0, output[0], 1E-4);
+    out = out && compare(2.0, output[1], 1E-4);
+    out = out && compare(2.0, output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output");
@@ -71,9 +80,9 @@ bool test_neural_net()
     // Check operator=
     net2 = net;
     output = net2.calculate();
-    out = out && compare(10.0, output[0], 1E-4);
-    out = out && compare(10.0, output[1], 1E-4);
-    out = out && compare(10.0, output[2], 1E-4);
+    out = out && compare(2.0, output[0], 1E-4);
+    out = out && compare(2.0, output[1], 1E-4);
+    out = out && compare(2.0, output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output copy");
@@ -90,9 +99,9 @@ bool test_neural_net()
     // Breed the net with itself, output is same since weights are zero
     net2 = mml::nnet<double, 3, 3>::breed(net, net2);
     output = net2.calculate();
-    out = out && compare(10.0, output[0], 1E-4);
-    out = out && compare(10.0, output[1], 1E-4);
-    out = out && compare(10.0, output[2], 1E-4);
+    out = out && compare(2.0, output[0], 1E-4);
+    out = out && compare(2.0, output[1], 1E-4);
+    out = out && compare(2.0, output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output breed");
@@ -101,20 +110,20 @@ bool test_neural_net()
     // Try to randomize the net
     net2.randomize();
     output = net2.calculate();
-    out = out && !compare(10.0, output[0], 1E-4);
-    out = out && !compare(10.0, output[1], 1E-4);
-    out = out && !compare(10.0, output[2], 1E-4);
+    out = out && !compare(2.0, output[0], 1E-4);
+    out = out && !compare(2.0, output[1], 1E-4);
+    out = out && !compare(2.0, output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output random");
     }
 
     // Breed randomized net
-    net2 = mml::nnet<double, 3, 3>::breed(net, net2);
+    net2 = mml::nnet<double, 3, 3>::breed(net2, net2);
     output = net2.calculate();
-    out = out && !compare(10.0, output[0], 1E-4);
-    out = out && !compare(10.0, output[1], 1E-4);
-    out = out && !compare(10.0, output[2], 1E-4);
+    out = out && !compare(2.0, output[0], 1E-4);
+    out = out && !compare(2.0, output[1], 1E-4);
+    out = out && !compare(2.0, output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output random breed");
@@ -123,12 +132,22 @@ bool test_neural_net()
     // Mutate the neural net
     net2.mutate();
     output = net2.calculate();
-    out = out && !compare(10.0, output[0], 1E-4);
-    out = out && !compare(10.0, output[1], 1E-4);
-    out = out && !compare(10.0, output[2], 1E-4);
+    out = out && !compare(2.0, output[0], 1E-4);
+    out = out && !compare(2.0, output[1], 1E-4);
+    out = out && !compare(2.0, output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate output random breed mutate");
+    }
+
+    // Test input is unchanged
+    in = net2.get_input();
+    out = out && compare(3.0, in[0], 1E-4);
+    out = out && compare(4.0, in[1], 1E-4);
+    out = out && compare(5.0, in[2], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net input unchanged");
     }
 
     // return result

@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <mml/vec.h>
 #include <random>
 #include <stdexcept>
@@ -74,42 +75,71 @@ class nnet
     vector<T, IN> _input;
     vector<T, OUT> _output;
     std::vector<std::vector<nnode<T>>> _layers;
+    bool _final;
+
+    void on_net(const std::function<void(nnode<T> &, const size_t, const size_t)> &f)
+    {
+        // For all net layers
+        const size_t layers = _layers.size();
+        for (size_t i = 0; i < layers; i++)
+        {
+            // For all layer nodes
+            const size_t nodes = _layers[i].size();
+            for (size_t j = 0; j < nodes; j++)
+            {
+                f(_layers[i][j], i, j);
+            }
+        }
+    }
+    void zero_output()
+    {
+        // Zero out all layers
+        const auto f = [](nnode<T> &node, const size_t i, const size_t j) {
+            node.zero();
+        };
+
+        // Randomize the net
+        on_net(f);
+    }
 
   public:
-    nnet() {}
+    nnet() : _final(false) {}
     void add_layer(const size_t size)
     {
-        // Zero initialize layer to zero
-        _layers.emplace_back(size);
+        if (!_final)
+        {
+            // Zero initialize layer to zero
+            _layers.emplace_back(size);
+        }
+        else
+        {
+            throw std::runtime_error("nnet: can't add layers to a finalized neural net");
+        }
     }
     static nnet<T, IN, OUT> breed(const nnet<T, IN, OUT> &p1, const nnet<T, IN, OUT> &p2)
     {
         // Initialize dimensions with p1
         nnet<T, IN, OUT> out = p1;
 
-        // Multiply nets together
-        const size_t layers = p1._layers.size();
-        for (size_t i = 0; i < layers; i++)
-        {
-            // Multiply nets together
-            const size_t nodes = p1._layers[i].size();
-            for (size_t j = 0; j < nodes; j++)
-            {
-                out._layers[i][j] = p1._layers[i][j] * p2._layers[i][j];
-            }
-        }
+        const auto f = [&p1, &p2](nnode<T> &node, const size_t i, const size_t j) {
+            node = p1._layers[i][j] * p2._layers[i][j];
+        };
+
+        // Breed nets together
+        out.on_net(f);
 
         return out;
     }
     vector<T, OUT> calculate()
     {
-        // Zero out output array
-        _output.zero();
+        // finalize the net, can't add layers after calling this function
+        finalize();
 
-        // Zero out all layers
-        zero();
+        // Zero out all node output
+        zero_output();
 
-        if (_layers.size() > 0)
+        // If we added any layers
+        if (_layers.size() > 1)
         {
             // Map input to first layer of net
             const size_t first = _layers[0].size();
@@ -139,16 +169,13 @@ class nnet
                 }
             }
 
-            // Map to last layer to output of net
+            // Map last layer to output of net
+            // Last layer is special and added during finalize so we can just grab the output value
+            // From the last internal layer for the output
             const std::vector<nnode<T>> &last = _layers.back();
-            const size_t output = last.size();
             for (size_t i = 0; i < OUT; i++)
             {
-                // For all nodes in first layer
-                for (size_t j = 0; j < output; j++)
-                {
-                    _output[i] += last[j].output();
-                }
+                _output[i] = last[i].output();
             }
         }
         else
@@ -180,30 +207,36 @@ class nnet
 
         return true;
     }
+    const vector<T, IN> &get_input() const
+    {
+        return _input;
+    }
     T get_node(const size_t i, const size_t j)
     {
         return _layers[i][j].output();
     }
+    void finalize()
+    {
+        if (!_final)
+        {
+            // Create output network layer
+            _layers.emplace_back(OUT);
+            _final = true;
+        }
+    }
     void mutate()
     {
-        // Breed with a randomized net
-        std::uniform_real_distribution<T> dst(-100.0, 100.0);
+        std::uniform_real_distribution<T> dst(-10.0, 10.0);
         std::mt19937 rgen;
         const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
         rgen.seed(seed);
 
-        // For all net layers
-        const size_t layers = _layers.size();
-        for (size_t i = 0; i < layers; i++)
-        {
-            // For all layer nodes
-            const size_t nodes = _layers[i].size();
-            for (size_t j = 0; j < nodes; j++)
-            {
-                // random node
-                _layers[i][j] *= nnode<T>(dst(rgen), dst(rgen));
-            }
-        }
+        const auto f = [&dst, &rgen](nnode<T> &node, const size_t i, const size_t j) {
+            node *= nnode<T>(dst(rgen), dst(rgen));
+        };
+
+        // Breed with a randomized net
+        on_net(f);
     }
     void randomize()
     {
@@ -213,37 +246,16 @@ class nnet
         const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
         rgen.seed(seed);
 
-        // For all net layers
-        const size_t layers = _layers.size();
-        for (size_t i = 0; i < layers; i++)
-        {
-            // For all layer nodes
-            const size_t nodes = _layers[i].size();
-            for (size_t j = 0; j < nodes; j++)
-            {
-                // random node
-                _layers[i][j] = nnode<T>(dst(rgen), dst(rgen));
-            }
-        }
+        const auto f = [&dst, &rgen](nnode<T> &node, const size_t i, const size_t j) {
+            node = nnode<T>(dst(rgen), dst(rgen));
+        };
+
+        // Randomize the net
+        on_net(f);
     }
     void set_input(const vector<T, IN> &input)
     {
         _input = input;
-    }
-    void zero()
-    {
-        // For all net layers
-        const size_t layers = _layers.size();
-        for (size_t i = 0; i < layers; i++)
-        {
-            // For all layer nodes
-            const size_t nodes = _layers[i].size();
-            for (size_t j = 0; j < nodes; j++)
-            {
-                // zero output
-                _layers[i][j].zero();
-            }
-        }
     }
 };
 }
