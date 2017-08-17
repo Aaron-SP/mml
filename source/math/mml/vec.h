@@ -29,10 +29,8 @@ class vector
   public:
     vector()
     {
-        for (size_t i = 0; i < N; i++)
-        {
-            _vec[i] = 0.0;
-        }
+        // zero all fields
+        zero();
     }
     vector(const T value[N])
     {
@@ -142,6 +140,13 @@ class vector
 
         // return the square magnitude
         return out;
+    }
+    inline void zero()
+    {
+        for (size_t i = 0; i < N; i++)
+        {
+            _vec[i] = 0.0;
+        }
     }
 };
 }

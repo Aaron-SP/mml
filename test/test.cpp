@@ -16,6 +16,7 @@ limitations under the License.
 #include <mml/tequation.h>
 #include <mml/tmat.h>
 #include <mml/tmult.h>
+#include <mml/tnnet.h>
 #include <mml/tsystem.h>
 #include <mml/tvec.h>
 
@@ -25,6 +26,7 @@ int main()
     {
         bool out = true;
         out = out && test_matrix();
+        out = out && test_neural_net();
         out = out && test_vector();
         out = out && test_matrix_multiply();
         out = out && test_equation();

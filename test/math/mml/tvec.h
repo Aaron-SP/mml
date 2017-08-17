@@ -109,6 +109,24 @@ bool test_vector()
         throw std::runtime_error("Failed vector constant operations");
     }
 
+    // Test operator=
+    v1 = v2;
+    out = out && compare(2.25, v1[0], 1E-4);
+    out = out && compare(0.75, v1[1], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed vector operator equal");
+    }
+
+    // Test zero
+    v1.zero();
+    out = out && compare(0.0, v1[0], 1E-4);
+    out = out && compare(0.0, v1[1], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed vector zero");
+    }
+
     return out;
 }
 
