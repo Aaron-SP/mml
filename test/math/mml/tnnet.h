@@ -31,6 +31,7 @@ bool test_neural_net()
     in[2] = 5.0;
     mml::vector<double, 3> output;
     mml::nnet<double, 3, 3> net;
+    mml::nnet<double, 3, 3> net2;
     net.add_layer(5);
     net.add_layer(4);
 
@@ -46,7 +47,7 @@ bool test_neural_net()
     out = out && compare(1.5, net.get_node(0, 4), 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed calculate layer 1");
+        throw std::runtime_error("Failed net calculate layer 1");
     }
 
     // Test second layer of net
@@ -56,7 +57,7 @@ bool test_neural_net()
     out = out && compare(2.5, net.get_node(1, 3), 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed calculate layer 2");
+        throw std::runtime_error("Failed net calculate layer 2");
     }
 
     out = out && compare(10.0, output[0], 1E-4);
@@ -64,21 +65,73 @@ bool test_neural_net()
     out = out && compare(10.0, output[2], 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed calculate output");
+        throw std::runtime_error("Failed net calculate output");
+    }
+
+    // Check operator=
+    net2 = net;
+    output = net2.calculate();
+    out = out && compare(10.0, output[0], 1E-4);
+    out = out && compare(10.0, output[1], 1E-4);
+    out = out && compare(10.0, output[2], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net calculate output copy");
+    }
+
+    // Check neural nets are compatible
+    const bool compatible = mml::nnet<double, 3, 3>::compatible(net, net2);
+    out = out && compatible;
+    if (!out)
+    {
+        throw std::runtime_error("Failed net compatible");
+    }
+
+    // Breed the net with itself, output is same since weights are zero
+    net2 = mml::nnet<double, 3, 3>::breed(net, net2);
+    output = net2.calculate();
+    out = out && compare(10.0, output[0], 1E-4);
+    out = out && compare(10.0, output[1], 1E-4);
+    out = out && compare(10.0, output[2], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net calculate output breed");
     }
 
     // Try to randomize the net
-    net.randomize();
-    output = net.calculate();
-
+    net2.randomize();
+    output = net2.calculate();
     out = out && !compare(10.0, output[0], 1E-4);
     out = out && !compare(10.0, output[1], 1E-4);
     out = out && !compare(10.0, output[2], 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed calculate output random");
+        throw std::runtime_error("Failed net calculate output random");
     }
 
+    // Breed randomized net
+    net2 = mml::nnet<double, 3, 3>::breed(net, net2);
+    output = net2.calculate();
+    out = out && !compare(10.0, output[0], 1E-4);
+    out = out && !compare(10.0, output[1], 1E-4);
+    out = out && !compare(10.0, output[2], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net calculate output random breed");
+    }
+
+    // Mutate the neural net
+    net2.mutate();
+    output = net2.calculate();
+    out = out && !compare(10.0, output[0], 1E-4);
+    out = out && !compare(10.0, output[1], 1E-4);
+    out = out && !compare(10.0, output[2], 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net calculate output random breed mutate");
+    }
+
+    // return result
     return out;
 }
 

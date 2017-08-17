@@ -19,6 +19,7 @@ limitations under the License.
 #include <cmath>
 #include <mml/vec.h>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
 namespace mml
@@ -40,6 +41,18 @@ class nnode
   public:
     nnode() : _weight(0.0), _bias(0.0), _output(0.0) {}
     nnode(const T weight, const T bias) : _weight(weight), _bias(bias), _output(0.0) {}
+    nnode<T> operator*(const nnode<T> &n) const
+    {
+        const T w = _weight * n._weight;
+        const T b = _bias + n._bias;
+        return nnode<T>(w, b);
+    }
+    nnode<T> &operator*=(const nnode<T> &n)
+    {
+        _weight *= n._weight;
+        _bias += n._bias;
+        return *this;
+    }
     T output() const
     {
         return _output;
@@ -68,6 +81,25 @@ class nnet
     {
         // Zero initialize layer to zero
         _layers.emplace_back(size);
+    }
+    static nnet<T, IN, OUT> breed(const nnet<T, IN, OUT> &p1, const nnet<T, IN, OUT> &p2)
+    {
+        // Initialize dimensions with p1
+        nnet<T, IN, OUT> out = p1;
+
+        // Multiply nets together
+        const size_t layers = p1._layers.size();
+        for (size_t i = 0; i < layers; i++)
+        {
+            // Multiply nets together
+            const size_t nodes = p1._layers[i].size();
+            for (size_t j = 0; j < nodes; j++)
+            {
+                out._layers[i][j] = p1._layers[i][j] * p2._layers[i][j];
+            }
+        }
+
+        return out;
     }
     vector<T, OUT> calculate()
     {
@@ -126,13 +158,52 @@ class nnet
 
         return _output;
     }
+    static bool compatible(const nnet<T, IN, OUT> &p1, const nnet<T, IN, OUT> &p2)
+    {
+        // Test if nets are compatible
+        if (p1._layers.size() != p2._layers.size())
+        {
+            throw std::runtime_error("nnet: can't breed incompatible neural nets, layers differ");
+        }
+
+        // Check net compatibility
+        const size_t layers = p1._layers.size();
+        for (size_t i = 0; i < layers; i++)
+        {
+            // For all nodes in in layer
+            const size_t nodes = p1._layers[i].size();
+            if (p2._layers[i].size() != nodes)
+            {
+                throw std::runtime_error("nnet: can't breed incompatible neural nets, nodes differ");
+            }
+        }
+
+        return true;
+    }
     T get_node(const size_t i, const size_t j)
     {
         return _layers[i][j].output();
     }
-    void set_input(const vector<T, IN> &input)
+    void mutate()
     {
-        _input = input;
+        // Breed with a randomized net
+        std::uniform_real_distribution<T> dst(-100.0, 100.0);
+        std::mt19937 rgen;
+        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        rgen.seed(seed);
+
+        // For all net layers
+        const size_t layers = _layers.size();
+        for (size_t i = 0; i < layers; i++)
+        {
+            // For all layer nodes
+            const size_t nodes = _layers[i].size();
+            for (size_t j = 0; j < nodes; j++)
+            {
+                // random node
+                _layers[i][j] *= nnode<T>(dst(rgen), dst(rgen));
+            }
+        }
     }
     void randomize()
     {
@@ -154,6 +225,10 @@ class nnet
                 _layers[i][j] = nnode<T>(dst(rgen), dst(rgen));
             }
         }
+    }
+    void set_input(const vector<T, IN> &input)
+    {
+        _input = input;
     }
     void zero()
     {
