@@ -25,6 +25,7 @@ bool test_neural_net()
     bool out = true;
 
     // Test nnet operations
+    mml::net_rng<double> rng;
     mml::vector<double, 3> in;
     in[0] = 3.0;
     in[1] = 4.0;
@@ -110,7 +111,7 @@ bool test_neural_net()
 
     // Try to randomize the net
     cached_output = output;
-    net2.randomize();
+    net2.randomize(rng);
     output = net2.calculate();
     out = out && !compare(cached_output[0], output[0], 1E-4);
     out = out && !compare(cached_output[1], output[1], 1E-4);
@@ -134,7 +135,7 @@ bool test_neural_net()
 
     // Mutate the neural net
     cached_output = output;
-    net2.mutate();
+    net2.mutate(rng);
     output = net2.calculate();
     out = out && !compare(cached_output[0], output[0], 1E-4);
     out = out && !compare(cached_output[1], output[1], 1E-4);
