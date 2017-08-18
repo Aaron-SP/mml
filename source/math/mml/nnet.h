@@ -103,6 +103,9 @@ class nnet
     vector<T, IN> _input;
     vector<T, OUT> _output;
     std::vector<std::vector<nnode<T>>> _layers;
+    std::uniform_real_distribution<T> _mut_dist;
+    std::uniform_real_distribution<T> _ran_dist;
+    std::mt19937 _rgen;
     bool _final;
 
     void on_net(const std::function<void(nnode<T> &, const size_t, const size_t)> &f)
@@ -145,7 +148,11 @@ class nnet
     }
 
   public:
-    nnet() : _final(false) {}
+    nnet() : _mut_dist(-10.0, 10.0), _ran_dist(-1.0, 1.0), _final(false)
+    {
+        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        _rgen.seed(seed);
+    }
     void add_layer(const size_t size)
     {
         if (!_final)
@@ -220,10 +227,6 @@ class nnet
                 _output[i] = last[i].output();
             }
         }
-        else
-        {
-            _output = _input;
-        }
 
         return _output;
     }
@@ -268,13 +271,8 @@ class nnet
     }
     void mutate()
     {
-        std::uniform_real_distribution<T> dst(-10.0, 10.0);
-        std::mt19937 rgen;
-        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        rgen.seed(seed);
-
-        const auto f = [&dst, &rgen](nnode<T> &node, const size_t i, const size_t j) {
-            node *= nnode<T>(dst(rgen), dst(rgen));
+        const auto f = [this](nnode<T> &node, const size_t i, const size_t j) {
+            node *= nnode<T>(_mut_dist(_rgen), _mut_dist(_rgen));
         };
 
         // Breed with a randomized net
@@ -282,14 +280,8 @@ class nnet
     }
     void randomize()
     {
-        // Random number generator
-        std::uniform_real_distribution<T> dst(-1.0, 1.0);
-        std::mt19937 rgen;
-        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        rgen.seed(seed);
-
-        const auto f = [&dst, &rgen](nnode<T> &node, const size_t i, const size_t j) {
-            node = nnode<T>(dst(rgen), dst(rgen));
+        const auto f = [this](nnode<T> &node, const size_t i, const size_t j) {
+            node = nnode<T>(_ran_dist(_rgen), _ran_dist(_rgen));
         };
 
         // Randomize the net
