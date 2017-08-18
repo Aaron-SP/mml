@@ -189,7 +189,11 @@ class nnet
     }
 
   public:
-    nnet() : _final(false) {}
+    nnet() : _final(false)
+    {
+        // Initialize first layer
+        add_layer(IN);
+    }
     void add_layer(const size_t size)
     {
         if (!_final)
@@ -225,17 +229,12 @@ class nnet
         zero_output();
 
         // If we added any layers
-        if (_layers.size() > 1)
+        if (_layers.size() > 2)
         {
             // Map input to first layer of net
-            const size_t first = _layers[0].size();
             for (size_t i = 0; i < IN; i++)
             {
-                // For all nodes in first layer
-                for (size_t j = 0; j < first; j++)
-                {
-                    _layers[0][j].sum(_input[i]);
-                }
+                _layers[0][i].sum(_input[i]);
             }
 
             // Do N-1 propagations from first layer
@@ -324,6 +323,17 @@ class nnet
         // Randomize the net
         on_net(f);
     }
+    void reset()
+    {
+        // Clear layers
+        _layers.clear();
+
+        // Unfinalize the net
+        _final = false;
+
+        // Initialize first layer
+        add_layer(IN);
+    }
     void set_input(const vector<T, IN> &input)
     {
         _input = input;
@@ -376,6 +386,21 @@ class nnet
         _layers.clear();
         int count = 0;
         const int size = (int)data[2];
+
+        // Check first layer size special case
+        const int first = data[3];
+        if (first != IN)
+        {
+            throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(IN) + "' but got '" + std::to_string(first) + "'");
+        }
+
+        // Check last layer size special case
+        const int last = data[2 + size];
+        if (last != OUT)
+        {
+            throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(OUT) + "' but got '" + std::to_string(last) + "'");
+        }
+
         for (int i = 0; i < size; i++)
         {
             // Add layers of length

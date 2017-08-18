@@ -42,33 +42,42 @@ bool test_neural_net()
     output = net.calculate();
 
     // Test first layer of net
-    out = out && compare(1.5, net.get_node(0, 0), 1E-4);
-    out = out && compare(1.5, net.get_node(0, 1), 1E-4);
-    out = out && compare(1.5, net.get_node(0, 2), 1E-4);
-    out = out && compare(1.5, net.get_node(0, 3), 1E-4);
-    out = out && compare(1.5, net.get_node(0, 4), 1E-4);
+    out = out && compare(0.5, net.get_node(0, 0), 1E-4);
+    out = out && compare(0.5, net.get_node(0, 1), 1E-4);
+    out = out && compare(0.5, net.get_node(0, 2), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate layer 1");
     }
 
     // Test second layer of net
-    out = out && compare(2.5, net.get_node(1, 0), 1E-4);
-    out = out && compare(2.5, net.get_node(1, 1), 1E-4);
-    out = out && compare(2.5, net.get_node(1, 2), 1E-4);
-    out = out && compare(2.5, net.get_node(1, 3), 1E-4);
+    out = out && compare(1.5, net.get_node(1, 0), 1E-4);
+    out = out && compare(1.5, net.get_node(1, 1), 1E-4);
+    out = out && compare(1.5, net.get_node(1, 2), 1E-4);
+    out = out && compare(1.5, net.get_node(1, 3), 1E-4);
+    out = out && compare(1.5, net.get_node(1, 4), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net calculate layer 2");
     }
 
-    // Test last layer of net
-    out = out && compare(2.0, net.get_node(2, 0), 1E-4);
-    out = out && compare(2.0, net.get_node(2, 1), 1E-4);
-    out = out && compare(2.0, net.get_node(2, 2), 1E-4);
+    // Test third layer of net
+    out = out && compare(2.5, net.get_node(2, 0), 1E-4);
+    out = out && compare(2.5, net.get_node(2, 1), 1E-4);
+    out = out && compare(2.5, net.get_node(2, 2), 1E-4);
+    out = out && compare(2.5, net.get_node(2, 3), 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed net calculate layer 2");
+        throw std::runtime_error("Failed net calculate layer 3");
+    }
+
+    // Test last layer of net
+    out = out && compare(2.0, net.get_node(3, 0), 1E-4);
+    out = out && compare(2.0, net.get_node(3, 1), 1E-4);
+    out = out && compare(2.0, net.get_node(3, 2), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed net calculate layer 4");
     }
 
     out = out && compare(2.0, output[0], 1E-4);
@@ -157,7 +166,7 @@ bool test_neural_net()
 
     // Test serialize neural net
     std::vector<double> data = net2.serialize();
-    out = out && compare(30, data.size());
+    out = out && compare(37, data.size());
     if (!out)
     {
         throw std::runtime_error("Failed net serialize");
