@@ -30,9 +30,9 @@ template <typename T>
 class nnode
 {
   private:
-    T _weight;
+    std::vector<T> _weights;
     T _bias;
-    T _output;
+    T _sum;
 
     static T transfer(const T input)
     {
@@ -40,37 +40,50 @@ class nnode
     }
 
   public:
-    nnode() : _weight(0.0), _bias(0.0), _output(0.0) {}
-    nnode(const T weight, const T bias) : _weight(weight), _bias(bias), _output(0.0) {}
+    nnode(const size_t size) : _weights(size, 0.0), _bias(0.0), _sum(0.0) {}
+    nnode(const std::vector<T> &weights, const T bias) : _weights(weights), _bias(bias), _sum(0.0) {}
     nnode<T> operator*(const nnode<T> &n) const
     {
-        const T product = std::abs(_weight * n._weight);
-
-        // Negative weights are dominant
-        T sign = 1.0;
-        if (_weight < 0.0 || n._weight < 0.0)
+        const size_t size = n._weights.size();
+        std::vector<T> weights(size, 0);
+        for (size_t i = 0; i < size; i++)
         {
-            sign = -1.0;
+            const T product = std::abs(_weights[i] * n._weights[i]);
+
+            // Negative weights are dominant
+            T sign = 1.0;
+            if (_weights[i] < 0.0 || n._weights[i] < 0.0)
+            {
+                sign = -1.0;
+            }
+
+            // geometric mean
+            weights[i] = sign * std::sqrt(product);
         }
 
-        // geometric mean and average
-        const T w = sign * std::sqrt(product);
+        // average
         const T b = (_bias + n._bias) * 0.5;
-        return nnode<T>(w, b);
+        return nnode<T>(weights, b);
     }
     nnode<T> &operator*=(const nnode<T> &n)
     {
-        const T product = std::abs(_weight * n._weight);
-
-        // Negative weights are dominant
-        T sign = 1.0;
-        if (_weight < 0.0 || n._weight < 0.0)
+        const size_t size = n._weights.size();
+        for (size_t i = 0; i < size; i++)
         {
-            sign = -1.0;
+            const T product = std::abs(_weights[i] * n._weights[i]);
+
+            // Negative weights are dominant
+            T sign = 1.0;
+            if (_weights[i] < 0.0 || n._weights[i] < 0.0)
+            {
+                sign = -1.0;
+            }
+
+            // geometric mean
+            _weights[i] = sign * std::sqrt(product);
         }
 
-        // geometric mean and average
-        _weight = sign * std::sqrt(product);
+        // average
         _bias = (_bias + n._bias) * 0.5;
         return *this;
     }
@@ -78,21 +91,25 @@ class nnode
     {
         return _bias;
     }
-    T get_weight() const
+    size_t get_inputs() const
     {
-        return _weight;
+        return _weights.size();
+    }
+    std::vector<T> get_weights() const
+    {
+        return _weights;
     }
     T output() const
     {
-        return _output;
+        return transfer(_sum);
     }
-    void sum(const T input)
+    void sum(const T input, const size_t index)
     {
-        _output += transfer(input * _weight + _bias);
+        _sum += input * _weights[index];
     }
     void zero()
     {
-        _output = 0.0;
+        _sum = _bias;
     }
 };
 
@@ -126,9 +143,31 @@ class net_rng
     {
         return _mut_dist(_rgen);
     }
+    std::vector<T> mutation(size_t size)
+    {
+        // Create a vector of random numbers
+        std::vector<T> out(size);
+        for (size_t i = 0; i < size; i++)
+        {
+            out[i] = this->mutation();
+        }
+
+        return out;
+    }
     T random()
     {
         return _ran_dist(_rgen);
+    }
+    std::vector<T> random(size_t size)
+    {
+        // Create a vector of random numbers
+        std::vector<T> out(size);
+        for (size_t i = 0; i < size; i++)
+        {
+            out[i] = this->random();
+        }
+
+        return out;
     }
     int random_int()
     {
@@ -140,13 +179,40 @@ class net_rng
     }
 };
 
+template <typename T>
+class nnlayer
+{
+  private:
+    std::vector<nnode<T>> _nodes;
+    size_t _inputs;
+
+  public:
+    nnlayer(const size_t size, const size_t inputs) : _nodes(size, inputs), _inputs(inputs) {}
+    inline size_t size() const
+    {
+        return _nodes.size();
+    }
+    inline size_t inputs() const
+    {
+        return _inputs;
+    }
+    inline nnode<T> &operator[](const size_t n)
+    {
+        return _nodes[n];
+    }
+    inline const nnode<T> &operator[](const size_t n) const
+    {
+        return _nodes[n];
+    }
+};
+
 template <typename T, size_t IN, size_t OUT>
 class nnet
 {
   private:
     vector<T, IN> _input;
     vector<T, OUT> _output;
-    std::vector<std::vector<nnode<T>>> _layers;
+    std::vector<nnlayer<T>> _layers;
     bool _final;
 
     void on_net(const std::function<void(nnode<T> &, const size_t, const size_t)> &f)
@@ -177,7 +243,7 @@ class nnet
             }
         }
     }
-    void zero_output()
+    void zero_nodes()
     {
         // Zero out all layers
         const auto f = [](nnode<T> &node, const size_t i, const size_t j) {
@@ -198,8 +264,16 @@ class nnet
     {
         if (!_final)
         {
+            // If first layer
+            size_t inputs = 1;
+            if (_layers.size() != 0)
+            {
+                // Size of last layer is number of inputs to next layer
+                inputs = _layers.back().size();
+            }
+
             // Zero initialize layer to zero
-            _layers.emplace_back(size);
+            _layers.emplace_back(size, inputs);
         }
         else
         {
@@ -226,7 +300,7 @@ class nnet
         finalize();
 
         // Zero out all node output
-        zero_output();
+        zero_nodes();
 
         // If we added any layers
         if (_layers.size() > 2)
@@ -234,7 +308,7 @@ class nnet
             // Map input to first layer of net
             for (size_t i = 0; i < IN; i++)
             {
-                _layers[0][i].sum(_input[i]);
+                _layers[0][i].sum(_input[i], 0);
             }
 
             // Do N-1 propagations from first layer
@@ -249,7 +323,7 @@ class nnet
                     const size_t size_out = _layers[i + 1].size();
                     for (size_t k = 0; k < size_out; k++)
                     {
-                        _layers[i + 1][k].sum(_layers[i][j].output());
+                        _layers[i + 1][k].sum(_layers[i][j].output(), j);
                     }
                 }
             }
@@ -257,7 +331,7 @@ class nnet
             // Map last layer to output of net
             // Last layer is special and added during finalize so we can just grab the output value
             // From the last internal layer for the output
-            const std::vector<nnode<T>> &last = _layers.back();
+            const nnlayer<T> &last = _layers.back();
             for (size_t i = 0; i < OUT; i++)
             {
                 _output[i] = last[i].output();
@@ -300,15 +374,16 @@ class nnet
     {
         if (!_final)
         {
-            // Create output network layer
-            _layers.emplace_back(OUT);
+            // Create output network layer with input count from last layer
+            add_layer(OUT);
             _final = true;
         }
     }
     void mutate(mml::net_rng<T> &ran)
     {
         const auto f = [&ran](nnode<T> &node, const size_t i, const size_t j) {
-            node *= nnode<T>(ran.mutation(), ran.mutation());
+            const size_t inputs = node.get_inputs();
+            node *= nnode<T>(ran.mutation(inputs), ran.mutation());
         };
 
         // Breed with a randomized net
@@ -317,7 +392,8 @@ class nnet
     void randomize(mml::net_rng<T> &ran)
     {
         const auto f = [&ran](nnode<T> &node, const size_t i, const size_t j) {
-            node = nnode<T>(ran.random(), ran.random());
+            const size_t inputs = node.get_inputs();
+            node = nnode<T>(ran.random(inputs), ran.random());
         };
 
         // Randomize the net
@@ -343,20 +419,29 @@ class nnet
         std::vector<T> out;
 
         // Serial net dimensions
-        out.push_back((T)IN);
-        out.push_back((T)OUT);
-        out.push_back((T)_layers.size());
+        out.push_back(static_cast<T>(IN));
+        out.push_back(static_cast<T>(OUT));
+        out.push_back(static_cast<T>(_layers.size()));
 
         // Serialize layer sizes
         const size_t size = _layers.size();
         for (size_t i = 0; i < size; i++)
         {
-            out.push_back((T)_layers[i].size());
+            const size_t nodes = _layers[i].size();
+            out.push_back(static_cast<T>(nodes));
         }
 
         // Serialize net data
         const auto f = [&out](const nnode<T> &node, const size_t i, const size_t j) {
-            out.push_back(node.get_weight());
+            // Serialize all weights
+            const size_t size = node.get_inputs();
+            const std::vector<T> &weights = node.get_weights();
+            for (size_t k = 0; k < size; k++)
+            {
+                out.push_back(weights[k]);
+            }
+
+            // Serialize bias
             out.push_back(node.get_bias());
         };
 
@@ -369,14 +454,14 @@ class nnet
     {
         // Use int here, in case someone feeds in garbage data
         // Check input size
-        const int in = (int)data[0];
+        const int in = static_cast<int>(data[0]);
         if (in != IN)
         {
             throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(IN) + "' but got '" + std::to_string(in) + "'");
         }
 
         // Check output size
-        const int out = (int)data[1];
+        const int out = static_cast<int>(data[1]);
         if (out != OUT)
         {
             throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(OUT) + "' but got '" + std::to_string(out) + "'");
@@ -384,8 +469,7 @@ class nnet
 
         // Clear the layers
         _layers.clear();
-        int count = 0;
-        const int size = (int)data[2];
+        const int size = static_cast<int>(data[2]);
 
         // Check first layer size special case
         const int first = data[3];
@@ -401,19 +485,39 @@ class nnet
             throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(OUT) + "' but got '" + std::to_string(last) + "'");
         }
 
+        // Count bytes
+        size_t count = 0;
+        int inputs = 0;
         for (int i = 0; i < size; i++)
         {
-            // Add layers of length
-            const int length = (int)data[3 + i];
+            // Number of nodes in layer
+            const int length = static_cast<int>(data[3 + i]);
+            if (length <= 0)
+            {
+                throw std::runtime_error("nnet: invalid layer size");
+            }
+
+            // Add new layer
             this->add_layer(length);
 
-            // Count nodes
-            count += length;
+            // Count data members in nodes
+            if (i == 0)
+            {
+                // Bias and one input
+                count += IN * 2;
+                inputs = IN;
+            }
+            else
+            {
+                // Bias and inputs per node in layer
+                count += length * (inputs + 1);
+                inputs = length;
+            }
         }
 
         // Check that the number of nodes makes sense
-        const size_t left = data.size() - 3 - size;
-        if (count * 2.0 != left)
+        const size_t left = data.size() - (size + 3);
+        if (count != left)
         {
             throw std::runtime_error("nnet: can't deserialize node mismatch");
         }
@@ -421,8 +525,16 @@ class nnet
         // Starting index, assign values to net
         size_t index = 3 + size;
         const auto f = [&data, &index](nnode<T> &node, const size_t i, const size_t j) {
-            node = nnode<T>(data[index], data[index + 1]);
-            index += 2;
+            // Copy all weights from data to nnode
+            const size_t size = node.get_inputs();
+            std::vector<T> weights(size);
+            for (size_t k = 0; k < size; k++)
+            {
+                weights[k] = data[index];
+                index++;
+            }
+            node = nnode<T>(weights, data[index]);
+            index++;
         };
 
         // Randomize the net
