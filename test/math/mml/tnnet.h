@@ -181,16 +181,82 @@ bool test_neural_net()
     net3.set_input(in);
     output = net3.calculate();
 
-    std::cout << output[0] << std::endl;
-    std::cout << output[1] << std::endl;
-    std::cout << output[2] << std::endl;
-
     out = out && compare(cached_output[0], output[0], 1E-4);
     out = out && compare(cached_output[1], output[1], 1E-4);
     out = out && compare(cached_output[2], output[2], 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed net deserialize calculate");
+    }
+
+    // Train neural net using backprop
+    bool converged = false;
+    for (size_t i = 0; i < 100000; i++)
+    {
+        // Recalculate input
+        in[0] = i * 0.000002;
+        in[1] = i * 0.000002;
+        in[2] = i * 0.000003;
+        net3.set_input(in);
+        net3.calculate();
+
+        // Train input to be output
+        net3.backprop(in);
+
+        // Check that the train works
+        output = net3.calculate();
+
+        // Check for convergence
+        if ((output - in).square_magnitude() < 1E-5)
+        {
+            converged = true;
+            break;
+        }
+    }
+
+    // Test neural net training
+    out = out && converged;
+    if (!out)
+    {
+        throw std::runtime_error("Failed neural net training 1");
+    }
+
+    // Test training sum inputs
+    converged = false;
+    for (size_t i = 0; i < 10000; i++)
+    {
+        // Recalculate input
+        in[0] = i * 0.00002;
+        in[1] = i * 0.00002;
+        in[2] = i * 0.00003;
+        net3.set_input(in);
+        net3.calculate();
+
+        // Set set point
+        mml::vector<double, 3> sp;
+        sp[0] = in[0] + in[1] + in[2];
+        sp[1] = in[0] + in[1] + in[2];
+        sp[2] = in[0] + in[1] + in[2];
+
+        // Train input to be output
+        net3.backprop(sp);
+
+        // Check that the train works
+        output = net3.calculate();
+
+        // Check for convergence
+        if ((output - sp).square_magnitude() < 1E-4)
+        {
+            converged = true;
+            break;
+        }
+    }
+
+    // Test neural net training
+    out = out && converged;
+    if (!out)
+    {
+        throw std::runtime_error("Failed neural net training 2");
     }
 
     // return result

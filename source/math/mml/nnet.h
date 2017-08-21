@@ -31,18 +31,28 @@ class nnode
 {
   private:
     std::vector<T> _weights;
+    std::vector<T> _inputs;
     T _bias;
     T _sum;
+    T _output;
+    T _delta;
 
-    static T transfer(const T input)
+    inline static T transfer(const T input)
     {
         return 1.0 / (1.0 + std::exp(-input));
     }
 
+    inline void zero()
+    {
+        _sum = _bias;
+        _output = 0.0;
+        _delta = 0.0;
+    }
+
   public:
-    nnode(const size_t size) : _weights(size, 0.0), _bias(0.0), _sum(0.0) {}
-    nnode(const std::vector<T> &weights, const T bias) : _weights(weights), _bias(bias), _sum(0.0) {}
-    nnode<T> operator*(const nnode<T> &n) const
+    nnode(const size_t size) : _weights(size, 0.0), _inputs(size, 0.0), _bias(0.0), _sum(0.0), _output(0.0), _delta(0.0) {}
+    nnode(const std::vector<T> &weights, const T bias) : _weights(weights), _inputs(weights.size(), 0.0), _bias(bias), _sum(0.0), _output(0.0), _delta(0.0) {}
+    inline nnode<T> operator*(const nnode<T> &n) const
     {
         const size_t size = n._weights.size();
         std::vector<T> weights(size, 0);
@@ -65,7 +75,7 @@ class nnode
         const T b = (_bias + n._bias) * 0.5;
         return nnode<T>(weights, b);
     }
-    nnode<T> &operator*=(const nnode<T> &n)
+    inline nnode<T> &operator*=(const nnode<T> &n)
     {
         const size_t size = n._weights.size();
         for (size_t i = 0; i < size; i++)
@@ -87,29 +97,62 @@ class nnode
         _bias = (_bias + n._bias) * 0.5;
         return *this;
     }
-    T get_bias() const
+    inline void calculate()
+    {
+        // Reset the node
+        zero();
+
+        // Calculate transfer
+        _output = transfer(_sum);
+    }
+    T delta(const size_t index) const
+    {
+        // dk * Wjk in backprop
+        return _delta * _weights[index];
+    }
+    void backprop(const T propagated)
+    {
+        // propagated = sum(dk * Wjk) or if last layer (Ok - tk)
+        // dj = (Oj)*(1.0 - Oj) * propagated
+        _delta = _output * (1.0 - _output) * propagated;
+
+        // Calculate step, step size 0.1
+        const T step = -0.1 * _delta;
+
+        // Update weights
+        const size_t size = _inputs.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Update weights
+            _weights[i] += step * _inputs[i];
+        }
+
+        // Update bias
+        _bias += step;
+    }
+    inline T get_bias() const
     {
         return _bias;
     }
-    size_t get_inputs() const
+    inline size_t get_inputs() const
     {
         return _weights.size();
     }
-    std::vector<T> get_weights() const
+    inline std::vector<T> get_weights() const
     {
         return _weights;
     }
-    T output() const
+    inline T output() const
     {
-        return transfer(_sum);
+        return _output;
     }
-    void sum(const T input, const size_t index)
+    inline void sum(const T input, const size_t index)
     {
+        // Store input for later
+        _inputs[index] = input;
+
+        // Sum input
         _sum += input * _weights[index];
-    }
-    void zero()
-    {
-        _sum = _bias;
     }
 };
 
@@ -243,16 +286,6 @@ class nnet
             }
         }
     }
-    void zero_nodes()
-    {
-        // Zero out all layers
-        const auto f = [](nnode<T> &node, const size_t i, const size_t j) {
-            node.zero();
-        };
-
-        // Randomize the net
-        on_net(f);
-    }
 
   public:
     nnet() : _final(false)
@@ -294,13 +327,58 @@ class nnet
 
         return out;
     }
+    void backprop(const vector<T, OUT> &set_point)
+    {
+        // We assume the network is in calculated state
+
+        // If we are in a valid state
+        if (_layers.size() >= 2)
+        {
+            // Do backprop for last layer first
+            const size_t last = _layers.size() - 1;
+
+            // Check that last layer is the appropriate size
+            const size_t last_size = _layers[last].size();
+            if (last_size != OUT)
+            {
+                throw std::runtime_error("nnet: backprop invalid output dimension");
+            }
+
+            // For all nodes in last layer
+            for (size_t i = 0; i < last_size; i++)
+            {
+                const T error = _layers[last][i].output() - set_point[i];
+
+                // Do backprop for node in last layer
+                _layers[last][i].backprop(error);
+            }
+
+            // For all internal layers, iterating backwards
+            const size_t layers = _layers.size();
+            for (size_t i = 1; i < layers; i++)
+            {
+                size_t current = last - i;
+                const size_t nodes = _layers[current].size();
+                for (size_t j = 0; j < nodes; j++)
+                {
+                    // For all nodes in layer, calculate delta summation
+                    T sum = 0.0;
+                    const size_t size_out = _layers[current + 1].size();
+                    for (size_t k = 0; k < size_out; k++)
+                    {
+                        sum += _layers[current + 1][k].delta(j);
+                    }
+
+                    // Do backprop for this node
+                    _layers[current][j].backprop(sum);
+                }
+            }
+        }
+    }
     vector<T, OUT> calculate()
     {
         // finalize the net, can't add layers after calling this function
         finalize();
-
-        // Zero out all node output
-        zero_nodes();
 
         // If we added any layers
         if (_layers.size() > 2)
@@ -323,6 +401,7 @@ class nnet
                     const size_t size_out = _layers[i + 1].size();
                     for (size_t k = 0; k < size_out; k++)
                     {
+                        _layers[i][j].calculate();
                         _layers[i + 1][k].sum(_layers[i][j].output(), j);
                     }
                 }
@@ -331,9 +410,10 @@ class nnet
             // Map last layer to output of net
             // Last layer is special and added during finalize so we can just grab the output value
             // From the last internal layer for the output
-            const nnlayer<T> &last = _layers.back();
+            nnlayer<T> &last = _layers.back();
             for (size_t i = 0; i < OUT; i++)
             {
+                last[i].calculate();
                 _output[i] = last[i].output();
             }
         }
