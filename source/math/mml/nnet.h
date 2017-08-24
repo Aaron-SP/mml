@@ -54,10 +54,10 @@ class nnode
   private:
     std::vector<T> _weights;
     std::vector<T> _delta_weights;
-    std::vector<T> _inputs;
+    mutable std::vector<T> _inputs;
     T _bias;
-    T _sum;
-    T _output;
+    mutable T _sum;
+    mutable T _output;
     T _delta;
 
     inline static T transfer_deriv_identity(const T output)
@@ -117,11 +117,10 @@ class nnode
         // Update bias
         _bias += step;
     }
-    inline void zero()
+    inline void zero() const
     {
         _sum = _bias;
         _output = 0.0;
-        _delta = 0.0;
     }
 
   public:
@@ -212,22 +211,22 @@ class nnode
         // Calculate steps for weights and biases
         backprop(step_size);
     }
-    inline void calculate_identity()
+    inline void calculate_identity() const
     {
         // Calculate transfer
         _output = transfer_identity(_sum);
     }
-    inline void calculate_relu()
+    inline void calculate_relu() const
     {
         // Calculate transfer
         _output = transfer_relu(_sum);
     }
-    inline void calculate_sigmoid()
+    inline void calculate_sigmoid() const
     {
         // Calculate transfer
         _output = transfer_sigmoid(_sum);
     }
-    inline void calculate_tanh()
+    inline void calculate_tanh() const
     {
         // Calculate transfer
         _output = transfer_tanh(_sum);
@@ -253,12 +252,12 @@ class nnode
     {
         return _output;
     }
-    inline void reset()
+    inline void reset() const
     {
         // Reset the node
         zero();
     }
-    inline void sum(const T input, const size_t index)
+    inline void sum(const T input, const size_t index) const
     {
         // Store input for later
         _inputs[index] = input;
@@ -365,8 +364,8 @@ template <typename T, size_t IN, size_t OUT>
 class nnet
 {
   private:
-    vector<T, IN> _input;
-    vector<T, OUT> _output;
+    mutable vector<T, IN> _input;
+    mutable vector<T, OUT> _output;
     std::vector<nnlayer<T>> _layers;
     bool _final;
 
@@ -422,63 +421,67 @@ class nnet
             throw std::runtime_error("nnet: can't backprop, not enough layers");
         }
     }
-    inline vector<T, OUT> calculate(const std::function<void(nnode<T> &)> &calc)
+    inline vector<T, OUT> calculate(const std::function<void(const nnode<T> &)> &calc) const
     {
-        // finalize the net, can't add layers after calling this function
-        finalize();
-
-        // If we added any layers
-        if (_layers.size() >= 2)
+        if (_final)
         {
-            // For each node in first layer
-            const size_t in_nodes = _layers[0].size();
-            for (size_t i = 0; i < in_nodes; i++)
+            // If we added any layers
+            if (_layers.size() >= 2)
             {
-                // Reset the layer node
-                _layers[0][i].reset();
-
-                // Map input to first layer of net
-                for (size_t j = 0; j < IN; j++)
-                {
-                    // Calculate sum of inputs
-                    _layers[0][i].sum(_input[j], j);
-                }
-            }
-
-            // Do N-1 propagations from first layer
-            const size_t layers = _layers.size() - 1;
-            for (size_t i = 0; i < layers; i++)
-            {
-                // For all nodes in out_layer
-                const size_t size_out = _layers[i + 1].size();
-                for (size_t j = 0; j < size_out; j++)
+                // For each node in first layer
+                const size_t in_nodes = _layers[0].size();
+                for (size_t i = 0; i < in_nodes; i++)
                 {
                     // Reset the layer node
-                    _layers[i + 1][j].reset();
+                    _layers[0][i].reset();
 
-                    // For all nodes in in_layer
-                    const size_t size_in = _layers[i].size();
-                    for (size_t k = 0; k < size_in; k++)
+                    // Map input to first layer of net
+                    for (size_t j = 0; j < IN; j++)
                     {
-                        calc(_layers[i][k]);
-                        _layers[i + 1][j].sum(_layers[i][k].output(), k);
+                        // Calculate sum of inputs
+                        _layers[0][i].sum(_input[j], j);
                     }
                 }
-            }
 
-            // Map last layer to output of net
-            // Last layer is special and added during finalize so we can just grab the output value
-            // From the last internal layer for the output
-            nnlayer<T> &last = _layers.back();
-            for (size_t i = 0; i < OUT; i++)
+                // Do N-1 propagations from first layer
+                const size_t layers = _layers.size() - 1;
+                for (size_t i = 0; i < layers; i++)
+                {
+                    // For all nodes in out_layer
+                    const size_t size_out = _layers[i + 1].size();
+                    for (size_t j = 0; j < size_out; j++)
+                    {
+                        // Reset the layer node
+                        _layers[i + 1][j].reset();
+
+                        // For all nodes in in_layer
+                        const size_t size_in = _layers[i].size();
+                        for (size_t k = 0; k < size_in; k++)
+                        {
+                            calc(_layers[i][k]);
+                            _layers[i + 1][j].sum(_layers[i][k].output(), k);
+                        }
+                    }
+                }
+
+                // Map last layer to output of net
+                // Last layer is special and added during finalize so we can just grab the output value
+                // From the last internal layer for the output
+                const nnlayer<T> &last = _layers.back();
+                for (size_t i = 0; i < OUT; i++)
+                {
+                    calc(last[i]);
+                    _output[i] = last[i].output();
+                }
+            }
+            else
             {
-                calc(last[i]);
-                _output[i] = last[i].output();
+                throw std::runtime_error("nnet: can't calculate, not enough layers");
             }
         }
         else
         {
-            throw std::runtime_error("nnet: can't calculate, not enough layers");
+            throw std::runtime_error("nnet: can't calculate, must finalize net");
         }
 
         return _output;
@@ -540,7 +543,7 @@ class nnet
         nnet<T, IN, OUT> out = p1;
 
         const auto f = [&p1, &p2](nnode<T> &node, const size_t i, const size_t j) {
-            node = p1._layers[i][j] * p2._layers[i][j];
+            node *= p2._layers[i][j];
         };
 
         // Breed nets together
@@ -580,33 +583,33 @@ class nnet
 
         backprop(f, set_point);
     }
-    inline vector<T, OUT> calculate_identity()
+    inline vector<T, OUT> calculate_identity() const
     {
-        const auto f = [](nnode<T> &node) {
+        const auto f = [](const nnode<T> &node) {
             node.calculate_identity();
         };
 
         return calculate(f);
     }
-    inline vector<T, OUT> calculate_relu()
+    inline vector<T, OUT> calculate_relu() const
     {
-        const auto f = [](nnode<T> &node) {
+        const auto f = [](const nnode<T> &node) {
             node.calculate_relu();
         };
 
         return calculate(f);
     }
-    inline vector<T, OUT> calculate_sigmoid()
+    inline vector<T, OUT> calculate_sigmoid() const
     {
-        const auto f = [](nnode<T> &node) {
+        const auto f = [](const nnode<T> &node) {
             node.calculate_sigmoid();
         };
 
         return calculate(f);
     }
-    inline vector<T, OUT> calculate_tanh()
+    inline vector<T, OUT> calculate_tanh() const
     {
-        const auto f = [](nnode<T> &node) {
+        const auto f = [](const nnode<T> &node) {
             node.calculate_tanh();
         };
 
@@ -698,7 +701,7 @@ class nnet
         // Unfinalize the net
         _final = false;
     }
-    inline void set_input(const vector<T, IN> &input)
+    inline void set_input(const vector<T, IN> &input) const
     {
         _input = input;
     }

@@ -39,6 +39,7 @@ bool test_neural_net()
         net.add_layer(3);
         net.add_layer(5);
         net.add_layer(4);
+        net.finalize();
 
         // Test net calculation, should be zero
         net.set_input(in);
