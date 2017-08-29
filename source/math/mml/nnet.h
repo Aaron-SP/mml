@@ -38,13 +38,79 @@ class mapper
 
   public:
     mapper(const T min, const T max) : _min(min), _max(max), _dx(max - min), _inv_dx(1.0 / _dx) {}
-    inline T map(const T val)
+    inline T map(const T val) const
     {
         return (val - _min) * _inv_dx;
     }
-    inline T unmap(const T val)
+    inline T unmap(const T val) const
     {
         return (val * _dx) + _min;
+    }
+};
+
+template <typename T>
+class net_rng
+{
+  private:
+    std::uniform_real_distribution<T> _mut_dist;
+    std::uniform_real_distribution<T> _ran_dist;
+    std::uniform_int_distribution<int> _int_dist;
+    std::mt19937 _rgen;
+
+  public:
+    net_rng()
+        : _mut_dist(-10.0, 10.0),
+          _ran_dist(-1.0, 1.0),
+          _int_dist(0, 100),
+          _rgen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
+    {
+    }
+    net_rng(const std::uniform_real_distribution<T> &mut_dist,
+            const std::uniform_real_distribution<T> &ran_dist,
+            const std::uniform_int_distribution<int> &int_dist)
+        : _mut_dist(mut_dist),
+          _ran_dist(ran_dist),
+          _int_dist(int_dist),
+          _rgen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
+    {
+    }
+    inline T mutation()
+    {
+        return _mut_dist(_rgen);
+    }
+    inline std::vector<T> mutation(size_t size)
+    {
+        // Create a vector of random numbers
+        std::vector<T> out(size);
+        for (size_t i = 0; i < size; i++)
+        {
+            out[i] = this->mutation();
+        }
+
+        return out;
+    }
+    inline T random()
+    {
+        return _ran_dist(_rgen);
+    }
+    inline std::vector<T> random(size_t size)
+    {
+        // Create a vector of random numbers
+        std::vector<T> out(size);
+        for (size_t i = 0; i < size; i++)
+        {
+            out[i] = this->random();
+        }
+
+        return out;
+    }
+    inline int random_int()
+    {
+        return _int_dist(_rgen);
+    }
+    inline void reseed()
+    {
+        _rgen.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     }
 };
 
@@ -105,17 +171,17 @@ class nnode
         }
 
         // Calculate step by step size
-        const T step = -step_size * _delta;
+        const T step = step_size * _delta;
 
         // Update weights
         for (size_t i = 0; i < size; i++)
         {
             // Update weights
-            _weights[i] += (step * _inputs[i]);
+            _weights[i] -= (step * _inputs[i]);
         }
 
         // Update bias
-        _bias += step;
+        _bias -= step;
     }
     inline void zero() const
     {
@@ -130,29 +196,6 @@ class nnode
     nnode(const std::vector<T> &weights, const T bias)
         : _weights(weights), _delta_weights(weights.size(), 0), _inputs(weights.size(), 0),
           _bias(bias), _sum(0.0), _output(0.0), _delta(0.0) {}
-    inline nnode<T> operator*(const nnode<T> &n) const
-    {
-        const size_t size = n._weights.size();
-        std::vector<T> weights(size, 0);
-        for (size_t i = 0; i < size; i++)
-        {
-            const T product = std::abs(_weights[i] * n._weights[i]);
-
-            // Negative weights are dominant
-            T sign = 1.0;
-            if (_weights[i] < 0.0 || n._weights[i] < 0.0)
-            {
-                sign = -1.0;
-            }
-
-            // geometric mean
-            weights[i] = sign * std::sqrt(product);
-        }
-
-        // average
-        const T b = (_bias + n._bias) * 0.5;
-        return nnode<T>(weights, b);
-    }
     inline nnode<T> &operator*=(const nnode<T> &n)
     {
         const size_t size = n._weights.size();
@@ -248,6 +291,55 @@ class nnode
     {
         return _weights;
     }
+    void mutate(mml::net_rng<T> &ran)
+    {
+        // Calculate a mutation type
+        const int r = ran.random_int();
+
+        // Mutate the node based on type
+        if (r % 2 == 0)
+        {
+            // Mutate the weight with mult
+            const int index = ran.random_int() % _weights.size();
+            if (index >= 0)
+            {
+                _weights[index] *= ran.mutation();
+            }
+        }
+        else if (r % 3 == 0)
+        {
+            // Mutate the bias with mult
+            _bias *= ran.mutation();
+        }
+        else if (r % 5 == 0)
+        {
+            // Mutate the weight with add
+            const int index = ran.random_int() % _weights.size();
+            if (index >= 0)
+            {
+                _weights[index] += ran.mutation();
+            }
+        }
+        else if (r % 7 == 0)
+        {
+            // Mutate the bias with add
+            _bias += ran.mutation();
+        }
+        else if (r % 11 == 0)
+        {
+            // Mutate the weight with sub
+            const int index = ran.random_int() % _weights.size();
+            if (index >= 0)
+            {
+                _weights[index] -= ran.mutation();
+            }
+        }
+        else if (r % 13 == 0)
+        {
+            // Mutate the bias with sub
+            _bias -= ran.mutation();
+        }
+    }
     inline T output() const
     {
         return _output;
@@ -264,72 +356,6 @@ class nnode
 
         // Sum input
         _sum += input * _weights[index];
-    }
-};
-
-template <typename T>
-class net_rng
-{
-  private:
-    std::uniform_real_distribution<T> _mut_dist;
-    std::uniform_real_distribution<T> _ran_dist;
-    std::uniform_int_distribution<int> _int_dist;
-    std::mt19937 _rgen;
-
-  public:
-    net_rng()
-        : _mut_dist(-10.0, 10.0),
-          _ran_dist(-1.0, 1.0),
-          _int_dist(0, 100),
-          _rgen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
-    {
-    }
-    net_rng(const std::uniform_real_distribution<T> &mut_dist,
-            const std::uniform_real_distribution<T> &ran_dist,
-            const std::uniform_int_distribution<int> &int_dist)
-        : _mut_dist(mut_dist),
-          _ran_dist(ran_dist),
-          _int_dist(int_dist),
-          _rgen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
-    {
-    }
-    inline T mutation()
-    {
-        return _mut_dist(_rgen);
-    }
-    inline std::vector<T> mutation(size_t size)
-    {
-        // Create a vector of random numbers
-        std::vector<T> out(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            out[i] = this->mutation();
-        }
-
-        return out;
-    }
-    inline T random()
-    {
-        return _ran_dist(_rgen);
-    }
-    inline std::vector<T> random(size_t size)
-    {
-        // Create a vector of random numbers
-        std::vector<T> out(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            out[i] = this->random();
-        }
-
-        return out;
-    }
-    inline int random_int()
-    {
-        return _int_dist(_rgen);
-    }
-    inline void reseed()
-    {
-        _rgen.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     }
 };
 
@@ -368,8 +394,9 @@ class nnet
     mutable vector<T, OUT> _output;
     std::vector<nnlayer<T>> _layers;
     bool _final;
+    bool _linear_output;
 
-    inline void backprop(const std::function<void(nnode<T> &, const T)> &back, const vector<T, OUT> &set_point)
+    inline void backprop(const std::function<void(nnode<T> &, const T, const T)> &back, const vector<T, OUT> &set_point, const T step_size)
     {
         // We assume the network is in calculated state
 
@@ -386,13 +413,28 @@ class nnet
                 throw std::runtime_error("nnet: backprop invalid output dimension");
             }
 
-            // For all nodes in last layer
-            for (size_t i = 0; i < last_size; i++)
+            // If we want a linear output node
+            if (_linear_output)
             {
-                const T error = _layers[last][i].output() - set_point[i];
+                // For all nodes in last layer
+                for (size_t i = 0; i < last_size; i++)
+                {
+                    const T error = _layers[last][i].output() - set_point[i];
 
-                // Do backprop for node in last layer
-                back(_layers[last][i], error);
+                    // Do backprop for node in last layer
+                    _layers[last][i].backprop_identity(error, step_size);
+                }
+            }
+            else
+            {
+                // For all nodes in last layer
+                for (size_t i = 0; i < last_size; i++)
+                {
+                    const T error = _layers[last][i].output() - set_point[i];
+
+                    // Do backprop for node in last layer
+                    back(_layers[last][i], error, step_size);
+                }
             }
 
             // For all internal layers, iterating backwards
@@ -412,7 +454,7 @@ class nnet
                     }
 
                     // Do backprop for this node
-                    back(_layers[current][j], sum);
+                    back(_layers[current][j], sum, step_size);
                 }
             }
         }
@@ -467,11 +509,25 @@ class nnet
                 // Map last layer to output of net
                 // Last layer is special and added during finalize so we can just grab the output value
                 // From the last internal layer for the output
-                const nnlayer<T> &last = _layers.back();
-                for (size_t i = 0; i < OUT; i++)
+
+                // If we want a linear output node
+                if (_linear_output)
                 {
-                    calc(last[i]);
-                    _output[i] = last[i].output();
+                    const nnlayer<T> &last = _layers.back();
+                    for (size_t i = 0; i < OUT; i++)
+                    {
+                        last[i].calculate_identity();
+                        _output[i] = last[i].output();
+                    }
+                }
+                else
+                {
+                    const nnlayer<T> &last = _layers.back();
+                    for (size_t i = 0; i < OUT; i++)
+                    {
+                        calc(last[i]);
+                        _output[i] = last[i].output();
+                    }
                 }
             }
             else
@@ -516,7 +572,7 @@ class nnet
     }
 
   public:
-    nnet() : _final(false) {}
+    nnet() : _final(false), _linear_output(false) {}
     inline void add_layer(const size_t size)
     {
         if (!_final)
@@ -553,35 +609,35 @@ class nnet
     }
     inline void backprop_identity(const vector<T, OUT> &set_point, const T step_size = 0.1)
     {
-        const auto f = [&step_size](nnode<T> &node, const T propagated) {
-            node.backprop_identity(propagated, step_size);
+        const auto f = [](nnode<T> &node, const T propagated, const T step) {
+            node.backprop_identity(propagated, step);
         };
 
-        backprop(f, set_point);
+        backprop(f, set_point, step_size);
     }
     inline void backprop_relu(const vector<T, OUT> &set_point, const T step_size = 0.1)
     {
-        const auto f = [&step_size](nnode<T> &node, const T propagated) {
-            node.backprop_relu(propagated, step_size);
+        const auto f = [](nnode<T> &node, const T propagated, const T step) {
+            node.backprop_relu(propagated, step);
         };
 
-        backprop(f, set_point);
+        backprop(f, set_point, step_size);
     }
     inline void backprop_sigmoid(const vector<T, OUT> &set_point, const T step_size = 0.1)
     {
-        const auto f = [&step_size](nnode<T> &node, const T propagated) {
-            node.backprop_sigmoid(propagated, step_size);
+        const auto f = [](nnode<T> &node, const T propagated, const T step) {
+            node.backprop_sigmoid(propagated, step);
         };
 
-        backprop(f, set_point);
+        backprop(f, set_point, step_size);
     }
     inline void backprop_tanh(const vector<T, OUT> &set_point, const T step_size = 0.1)
     {
-        const auto f = [&step_size](nnode<T> &node, const T propagated) {
-            node.backprop_tanh(propagated, step_size);
+        const auto f = [](nnode<T> &node, const T propagated, const T step) {
+            node.backprop_tanh(propagated, step);
         };
 
-        backprop(f, set_point);
+        backprop(f, set_point, step_size);
     }
     inline vector<T, OUT> calculate_identity() const
     {
@@ -673,15 +729,20 @@ class nnet
             _final = true;
         }
     }
+    inline void set_linear_output(const bool mode)
+    {
+        _linear_output = mode;
+    }
     inline void mutate(mml::net_rng<T> &ran)
     {
-        const auto f = [&ran](nnode<T> &node, const size_t i, const size_t j) {
-            const size_t inputs = node.get_inputs();
-            node *= nnode<T>(ran.mutation(inputs), ran.mutation());
-        };
+        // Calculate a random layer index
+        const int layer_index = ran.random_int() % _layers.size();
 
-        // Breed with a randomized net
-        on_net(f);
+        // Calculate a random node index
+        const int node_index = ran.random_int() % _layers[layer_index].size();
+
+        // Mutate this node
+        _layers[layer_index][node_index].mutate(ran);
     }
     inline void randomize(mml::net_rng<T> &ran)
     {
