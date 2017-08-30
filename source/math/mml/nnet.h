@@ -12,107 +12,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef __NEURAL_NET__
-#define __NEURAL_NET__
+#ifndef __NEURAL_NET_FIXED__
+#define __NEURAL_NET_FIXED__
 
-#include <chrono>
-#include <cmath>
 #include <functional>
 #include <iostream>
+#include <mml/nn.h>
 #include <mml/vec.h>
-#include <random>
-#include <stdexcept>
 #include <vector>
 
 namespace mml
 {
-// Maps range to 0, 1 for use with nnet
-template <typename T>
-class mapper
-{
-  private:
-    T _min;
-    T _max;
-    T _dx;
-    T _inv_dx;
-
-  public:
-    mapper(const T min, const T max) : _min(min), _max(max), _dx(max - min), _inv_dx(1.0 / _dx) {}
-    inline T map(const T val) const
-    {
-        return (val - _min) * _inv_dx;
-    }
-    inline T unmap(const T val) const
-    {
-        return (val * _dx) + _min;
-    }
-};
-
-template <typename T>
-class net_rng
-{
-  private:
-    std::uniform_real_distribution<T> _mut_dist;
-    std::uniform_real_distribution<T> _ran_dist;
-    std::uniform_int_distribution<int> _int_dist;
-    std::mt19937 _rgen;
-
-  public:
-    net_rng()
-        : _mut_dist(-10.0, 10.0),
-          _ran_dist(-1.0, 1.0),
-          _int_dist(0, 100),
-          _rgen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
-    {
-    }
-    net_rng(const std::uniform_real_distribution<T> &mut_dist,
-            const std::uniform_real_distribution<T> &ran_dist,
-            const std::uniform_int_distribution<int> &int_dist)
-        : _mut_dist(mut_dist),
-          _ran_dist(ran_dist),
-          _int_dist(int_dist),
-          _rgen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
-    {
-    }
-    inline T mutation()
-    {
-        return _mut_dist(_rgen);
-    }
-    inline std::vector<T> mutation(size_t size)
-    {
-        // Create a vector of random numbers
-        std::vector<T> out(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            out[i] = this->mutation();
-        }
-
-        return out;
-    }
-    inline T random()
-    {
-        return _ran_dist(_rgen);
-    }
-    inline std::vector<T> random(size_t size)
-    {
-        // Create a vector of random numbers
-        std::vector<T> out(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            out[i] = this->random();
-        }
-
-        return out;
-    }
-    inline int random_int()
-    {
-        return _int_dist(_rgen);
-    }
-    inline void reseed()
-    {
-        _rgen.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-    }
-};
 
 template <typename T>
 class nnode
@@ -294,17 +204,16 @@ class nnode
     void mutate(mml::net_rng<T> &ran)
     {
         // Calculate a mutation type
-        const int r = ran.random_int();
+        const unsigned r = ran.random_int();
+
+        // calculate random weight index
+        const unsigned index = ran.random_int() % _weights.size();
 
         // Mutate the node based on type
         if (r % 2 == 0)
         {
             // Mutate the weight with mult
-            const int index = ran.random_int() % _weights.size();
-            if (index >= 0)
-            {
-                _weights[index] *= ran.mutation();
-            }
+            _weights[index] *= ran.mutation();
         }
         else if (r % 3 == 0)
         {
@@ -314,11 +223,7 @@ class nnode
         else if (r % 5 == 0)
         {
             // Mutate the weight with add
-            const int index = ran.random_int() % _weights.size();
-            if (index >= 0)
-            {
-                _weights[index] += ran.mutation();
-            }
+            _weights[index] += ran.mutation();
         }
         else if (r % 7 == 0)
         {
@@ -328,11 +233,7 @@ class nnode
         else if (r % 11 == 0)
         {
             // Mutate the weight with sub
-            const int index = ran.random_int() % _weights.size();
-            if (index >= 0)
-            {
-                _weights[index] -= ran.mutation();
-            }
+            _weights[index] -= ran.mutation();
         }
         else if (r % 13 == 0)
         {
@@ -736,10 +637,10 @@ class nnet
     inline void mutate(mml::net_rng<T> &ran)
     {
         // Calculate a random layer index
-        const int layer_index = ran.random_int() % _layers.size();
+        const unsigned layer_index = ran.random_int() % _layers.size();
 
         // Calculate a random node index
-        const int node_index = ran.random_int() % _layers[layer_index].size();
+        const unsigned node_index = ran.random_int() % _layers[layer_index].size();
 
         // Mutate this node
         _layers[layer_index][node_index].mutate(ran);
