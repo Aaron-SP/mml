@@ -185,7 +185,7 @@ bool test_neural_net_augmented()
         size_t net_id = net.id();
         cached_output = net.calculate();
         std::vector<double> data = net.serialize();
-        out = out && compare(61, data.size());
+        out = out && compare(51, data.size());
         if (!out)
         {
             throw std::runtime_error("Failed neat serialize");

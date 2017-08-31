@@ -33,7 +33,6 @@ class nanode
     std::vector<size_t> _edges;
     std::map<size_t, T> _weights;
     T _bias;
-    size_t _id;
     mutable T _sum;
     mutable T _output;
 
@@ -44,14 +43,14 @@ class nanode
     }
 
   public:
-    nanode(const size_t id)
-        : _bias(0.0), _id(id), _sum(0.0), _output(0.0) {}
-    nanode(const size_t id, const T output)
-        : _bias(0.0), _id(id), _sum(0.0), _output(output) {}
-    nanode(const std::vector<T> &data, size_t &start) : _bias(0.0), _id(0), _sum(0.0), _output(0.0)
+    nanode()
+        : _bias(0.0), _sum(0.0), _output(0.0) {}
+    nanode(const T output)
+        : _bias(0.0), _sum(0.0), _output(output) {}
+    nanode(const std::vector<T> &data, size_t &start) : _bias(0.0), _sum(0.0), _output(0.0)
     {
         // Test if we have enough data
-        if (data.size() < 4)
+        if (data.size() < 3)
         {
             throw std::runtime_error("nanode: can't deserialize, not enough data");
         }
@@ -68,26 +67,18 @@ class nanode
 
         // Record data properties
         _bias = data[start + 2];
-        const int id = static_cast<int>(data[start + 3]);
-        if (id < 0)
-        {
-            throw std::runtime_error("nanode: can't deserialize, invalid innovation number");
-        }
-
-        // Assign id
-        _id = id;
 
         // Test if we have enough data
         const size_t needed = edge_size + (weight_size * 2);
-        if ((data.size() - start - 4) < needed)
+        if ((data.size() - start - 3) < needed)
         {
             throw std::runtime_error("nanode: can't deserialize, invalid data size");
         }
 
         // Read edge data
-        const size_t edge_offset = start + 4;
+        const size_t edge_offset = start + 3;
         _edges.reserve(edge_size);
-        for (size_t i = 0; i < edge_size; i++)
+        for (int i = 0; i < edge_size; i++)
         {
             // read edge data
             const int index = static_cast<int>(data[edge_offset + i]);
@@ -102,7 +93,7 @@ class nanode
 
         // Read weight data
         const size_t w_offset = edge_offset + edge_size;
-        for (size_t i = 0; i < weight_size; i++)
+        for (int i = 0; i < weight_size; i++)
         {
             // Calculate read offset
             const size_t index = data[w_offset + (i * 2)];
@@ -113,7 +104,7 @@ class nanode
         }
 
         // Increment data pointer
-        start += 4 + edge_size + weight_size * 2;
+        start += 3 + edge_size + weight_size * 2;
     }
     void calculate() const
     {
@@ -132,12 +123,14 @@ class nanode
     {
         _output = out;
     }
-    size_t id() const
-    {
-        return _id;
-    }
     void mutate(mml::net_rng<T> &ran)
     {
+        // Don't mutate if no connections
+        if (_weights.size() == 0)
+        {
+            return;
+        }
+
         // Calculate a mutation type
         const unsigned r = ran.random_int();
 
@@ -262,7 +255,6 @@ class nanode
         data.push_back(static_cast<T>(edge_size));
         data.push_back(static_cast<T>(weight_size));
         data.push_back(_bias);
-        data.push_back(static_cast<T>(_id));
 
         // Serialize edges
         for (size_t i = 0; i < edge_size; i++)
@@ -285,6 +277,7 @@ class nanode
             throw std::runtime_error("nanode: node is disjoint");
         }
 
+        // Get weight
         const auto w_iter = _weights.find(index);
 
         // Sum the input node
@@ -298,7 +291,9 @@ class nneat
   private:
     std::vector<nanode<T>> _nodes;
     mutable vector<T, OUT> _output;
-    size_t _id;
+    unsigned _q;
+    unsigned _r;
+    unsigned _s;
 
     bool output_node(const size_t to)
     {
@@ -339,20 +334,20 @@ class nneat
     }
 
   public:
-    nneat() : _id(0)
+    nneat() : _q(29.0), _r(7.0), _s(3.0)
     {
         // Create input nodes
         for (size_t i = 0; i < IN; i++)
         {
             // Create an input node with constant output
-            _nodes.emplace_back(_id++, 0.0);
+            _nodes.emplace_back(0.0);
         }
 
         // Create output nodes
         for (size_t i = 0; i < OUT; i++)
         {
             // Create an input node with constant output
-            _nodes.emplace_back(_id++);
+            _nodes.emplace_back();
         }
     }
     inline void add_connection(const size_t from, const size_t to)
@@ -384,7 +379,7 @@ class nneat
         }
 
         // Add unconnected node
-        _nodes.emplace_back(_id++);
+        _nodes.emplace_back();
 
         // Get new node index
         const size_t last = _nodes.size() - 1;
@@ -406,19 +401,45 @@ class nneat
         // Initialize dimensions with p1
         nneat<T, IN, OUT> out = p1;
 
-        // randomize all hidden nodes
-        const size_t node_beg = IN + OUT;
-        const size_t nodes = std::min(p1._nodes.size(), p2._nodes.size());
-        for (size_t i = node_beg; i < nodes; i++)
-        {
-            // Check if species diverged
-            if (p1._nodes[i].id() != p2._nodes[i].id())
-            {
-                break;
-            }
+        // Recursive traversal of DAG
+        std::function<void(const nanode<T> &node1, const nanode<T> &node2)> dfs;
+        dfs = [&dfs, &out, &p2](const nanode<T> &node1, const nanode<T> &node2) {
 
-            // Breed genes together
-            out._nodes[i] *= p2._nodes[i];
+            // Get all edges on nodes
+            const std::vector<size_t> &e1 = node1.get_edges();
+            const std::vector<size_t> &e2 = node2.get_edges();
+            const size_t edges = std::min(e1.size(), e2.size());
+            for (size_t i = 0; i < edges; i++)
+            {
+                // Get edge index
+                const size_t i1 = e1[i];
+                const size_t i2 = e2[i];
+
+                // If these are the same node in DAG
+                if (i1 == i2)
+                {
+                    // Get next nodes
+                    nanode<T> &en1 = out._nodes[i1];
+                    const nanode<T> &en2 = p2._nodes[i2];
+
+                    // Perform cross over
+                    en1 *= en2;
+
+                    // Recurse
+                    dfs(en1, en2);
+                }
+            }
+        };
+
+        // Crossover node by node
+        for (size_t i = 0; i < IN; i++)
+        {
+            // Get next nodes
+            const nanode<T> &node1 = p1._nodes[i];
+            const nanode<T> &node2 = p2._nodes[i];
+
+            // Call recursion
+            dfs(node1, node2);
         }
 
         return out;
@@ -502,26 +523,36 @@ class nneat
             {
                 std::cout << "    -> " << e << std::endl;
             }
+
+            // Write node output
+            std::cout << "    value: " << node.output() << std::endl;
         }
     }
     size_t id() const
     {
-        return _id;
+        return _nodes.size();
     }
     inline void mutate_topology(mml::net_rng<T> &ran)
     {
+        // Roll dice
         const unsigned r = ran.random_int();
-        const unsigned inner_nodes = _nodes.size() - (IN + OUT);
-        const unsigned from = (ran.random_int() % inner_nodes) + (IN + OUT);
 
-        // choose mutation type
+        // Between IN and END, even though OUT can't be a 'from'
+        const unsigned from = ran.random_int() % _nodes.size();
+
+        // Choose mutation type
         if (r % 2 == 0)
         {
-            const unsigned to = (ran.random_int() % inner_nodes) + (IN + OUT);
+            // 'to' can't be an input
+            const unsigned not_input_size = _nodes.size() - IN;
+
+            // Between OUT and END
+            const unsigned to = (ran.random_int() % not_input_size) + IN;
             add_connection(from, to);
         }
         else
         {
+            // 'to' must be an output, enforce only OUT
             const unsigned out = (ran.random_int() % OUT) + IN;
             add_node_between(from, out);
         }
@@ -529,18 +560,23 @@ class nneat
     inline void mutate_weight(mml::net_rng<T> &ran)
     {
         // Calculate a random layer index
-        const unsigned inner_nodes = _nodes.size() - (IN + OUT);
-        const unsigned node_index = (ran.random_int() % inner_nodes) + (IN + OUT);
+        const unsigned not_input_size = _nodes.size() - IN;
+
+        // Protect input nodes that have NO WEIGHTS
+        // Between OUT and END
+        const unsigned node_index = (ran.random_int() % not_input_size) + IN;
 
         // Mutate this node
         _nodes[node_index].mutate(ran);
     }
     inline void mutate(mml::net_rng<T> &ran)
     {
+        const unsigned q = ran.random_int();
         const unsigned r = ran.random_int();
+        const unsigned s = ran.random_int();
 
-        // choose mutation type
-        if (r % 2 == 0)
+        // choose mutation type, weight mutations are more probable
+        if ((q % _q == 0) && (r % _r == 0) && (s % _s == 0))
         {
             mutate_topology(ran);
         }
@@ -551,7 +587,8 @@ class nneat
     }
     inline void randomize(mml::net_rng<T> &ran)
     {
-        const size_t node_beg = IN + OUT;
+        // Skip input nodes since no weights
+        const size_t node_beg = IN;
         const size_t nodes = _nodes.size();
 
         // randomize all hidden nodes
@@ -569,6 +606,12 @@ class nneat
             _nodes[i].fixed(input[i]);
         }
     }
+    void set_topology_constants(const unsigned q, const unsigned r, const unsigned s)
+    {
+        _q = q;
+        _r = r;
+        _s = s;
+    }
     inline std::vector<T> serialize() const
     {
         std::vector<T> out;
@@ -577,7 +620,6 @@ class nneat
         out.push_back(static_cast<T>(IN));
         out.push_back(static_cast<T>(OUT));
         out.push_back(static_cast<T>(_nodes.size()));
-        out.push_back(static_cast<T>(_id));
 
         // Pack all nodes
         const size_t size = _nodes.size();
@@ -615,20 +657,10 @@ class nneat
             throw std::runtime_error("nneat: can't deserialize, invalid node size");
         }
 
-        // Read innovation number
-        const int id = static_cast<int>(data[3]);
-        if (id < 0)
-        {
-            throw std::runtime_error("nneat: can't deserialize, invalid innovation number");
-        }
-
-        // Assign id
-        _id = id;
-
         // Unpack all nanodes
         _nodes.reserve(node_size);
-        size_t start = 4;
-        for (size_t i = 0; i < node_size; i++)
+        size_t start = 3;
+        for (int i = 0; i < node_size; i++)
         {
             _nodes.emplace_back(data, start);
         }
