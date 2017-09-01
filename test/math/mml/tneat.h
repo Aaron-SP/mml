@@ -53,6 +53,11 @@ bool test_neural_net_augmented()
         net.add_connection(1, 4);
         net.add_connection(2, 5);
 
+        // Test adding same connection twice no duplicate
+        net.add_connection(0, 3);
+        net.add_connection(1, 4);
+        net.add_connection(2, 5);
+
         // Test add connection
         output = net.calculate();
         out = out && compare(0.9525, output[0], 1E-4);

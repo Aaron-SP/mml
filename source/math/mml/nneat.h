@@ -114,10 +114,13 @@ class nanode
     {
         _edges.push_back(index);
     }
-    void connect_weight(const T weight, const size_t index)
+    bool connect_weight(const T weight, const size_t index)
     {
         // Insert connection into node
-        _weights.insert(std::make_pair(index, weight));
+        const auto p = _weights.insert(std::make_pair(index, weight));
+
+        // return if success
+        return p.second;
     }
     void fixed(const T out) const
     {
@@ -243,7 +246,7 @@ class nanode
     }
     void reset() const
     {
-        _sum = 0;
+        _sum = _bias;
     }
     void serialize(std::vector<T> &data) const
     {
@@ -358,11 +361,16 @@ class nneat
             return;
         }
 
+        // Try to connect weight between from and to, default weight 1.0
+        const bool inserted = _nodes[to].connect_weight(1.0, from);
+        if (!inserted)
+        {
+            // duplicate key, so don't add edge
+            return;
+        }
+
         // Add edge between
         _nodes[from].connect_edge(to);
-
-        // Connect weight between from and to of 1
-        _nodes[to].connect_weight(1.0, from);
     }
     inline void add_node_between(const size_t from, const size_t to)
     {
@@ -540,8 +548,14 @@ class nneat
         // Between IN and END, even though OUT can't be a 'from'
         const unsigned from = ran.random_int() % _nodes.size();
 
-        // Choose mutation type
-        if (r % 2 == 0)
+        // Choose mutation type, connections are more probable
+        if (r % _r == 0)
+        {
+            // 'to' must be an output, enforce only OUT
+            const unsigned out = (ran.random_int() % OUT) + IN;
+            add_node_between(from, out);
+        }
+        else
         {
             // 'to' can't be an input
             const unsigned not_input_size = _nodes.size() - IN;
@@ -549,12 +563,6 @@ class nneat
             // Between OUT and END
             const unsigned to = (ran.random_int() % not_input_size) + IN;
             add_connection(from, to);
-        }
-        else
-        {
-            // 'to' must be an output, enforce only OUT
-            const unsigned out = (ran.random_int() % OUT) + IN;
-            add_node_between(from, out);
         }
     }
     inline void mutate_weight(mml::net_rng<T> &ran)
