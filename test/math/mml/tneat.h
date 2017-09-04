@@ -68,6 +68,34 @@ bool test_neural_net_augmented()
             throw std::runtime_error("Failed neat add connection 1");
         }
 
+        // Test removing connection and adding it again
+        net.remove_connection(0, 3);
+        net.remove_connection(1, 4);
+        net.remove_connection(2, 5);
+
+        output = net.calculate();
+        out = out && compare(0.5, output[0], 1E-4);
+        out = out && compare(0.5, output[1], 1E-4);
+        out = out && compare(0.5, output[2], 1E-4);
+        if (!out)
+        {
+            throw std::runtime_error("Failed neat remove connection");
+        }
+
+        net.add_connection(0, 3);
+        net.add_connection(1, 4);
+        net.add_connection(2, 5);
+
+        // Test add connection
+        output = net.calculate();
+        out = out && compare(0.9525, output[0], 1E-4);
+        out = out && compare(0.9820, output[1], 1E-4);
+        out = out && compare(0.9933, output[2], 1E-4);
+        if (!out)
+        {
+            throw std::runtime_error("Failed neat add connection 2");
+        }
+
         // Test faulty connection from output to input
         net.add_connection(3, 0);
         net.add_connection(4, 1);
@@ -216,9 +244,17 @@ bool test_neural_net_augmented()
         }
 
         // Test serialize neural net3
+        const size_t connections = net3.get_connections();
         net_id = net3.id();
         cached_output = net3.calculate();
         data = net3.serialize();
+
+        // Test connection count
+        out = out && compare(7, connections, 1E-4);
+        if (!out)
+        {
+            throw std::runtime_error("Failed neat serialize connection count");
+        }
 
         // Test deserialize neural net3
         net2.deserialize(data);
@@ -237,6 +273,13 @@ bool test_neural_net_augmented()
         if (!out)
         {
             throw std::runtime_error("Failed neat serialize id match 2");
+        }
+
+        // Test connection count
+        out = out && compare(7, net2.get_connections(), 1E-4);
+        if (!out)
+        {
+            throw std::runtime_error("Failed neat deserialize connection count");
         }
     }
 

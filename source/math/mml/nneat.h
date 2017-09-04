@@ -215,7 +215,7 @@ class nanode
         // connections can occur multiple times
         _edges.erase(std::remove(_edges.begin(), _edges.end(), index), _edges.end());
     }
-    void remove_weight(const size_t index)
+    bool remove_weight(const size_t index)
     {
         // Check if key exists and erase
         const auto w_iter = _weights.find(index);
@@ -223,7 +223,12 @@ class nanode
         {
             // Only one weight per connection since map is unique
             _weights.erase(w_iter);
+
+            // return status
+            return true;
         }
+
+        return false;
     }
     const std::vector<size_t> &get_edges() const
     {
@@ -294,6 +299,9 @@ class nneat
   private:
     std::vector<nanode<T>> _nodes;
     mutable vector<T, OUT> _output;
+    unsigned _connections;
+    unsigned _connection_limit;
+    unsigned _node_limit;
     unsigned _q;
     unsigned _r;
     unsigned _s;
@@ -337,7 +345,10 @@ class nneat
     }
 
   public:
-    nneat() : _q(29.0), _r(7.0), _s(3.0)
+    nneat()
+        : _connections(0),
+          _connection_limit(500), _node_limit(500),
+          _q(29.0), _r(7.0), _s(3.0)
     {
         // Create input nodes
         for (size_t i = 0; i < IN; i++)
@@ -356,7 +367,7 @@ class nneat
     inline void add_connection(const size_t from, const size_t to)
     {
         // Check connections are valid
-        if (!prevent_cycles(from, to))
+        if (!prevent_cycles(from, to) || _connections > _connection_limit)
         {
             return;
         }
@@ -371,6 +382,9 @@ class nneat
 
         // Add edge between
         _nodes[from].connect_edge(to);
+
+        // Record connection
+        _connections++;
     }
     inline void add_node_between(const size_t from, const size_t to)
     {
@@ -381,7 +395,7 @@ class nneat
         }
 
         // Check connections are valid
-        if (!prevent_cycles(from, to))
+        if (!prevent_cycles(from, to) || _nodes.size() > _node_limit)
         {
             return;
         }
@@ -392,17 +406,27 @@ class nneat
         // Get new node index
         const size_t last = _nodes.size() - 1;
 
-        // Remove edge to 'to'
-        _nodes[from].remove_edge(to);
-
-        // Remove weight on 'to'
-        _nodes[to].remove_weight(from);
+        // Remove connection before adding node
+        remove_connection(from, to);
 
         // Connect from to new node
         add_connection(from, last);
 
         // Connect new node to 'to'
         add_connection(last, to);
+    }
+    inline void remove_connection(const size_t from, const size_t to)
+    {
+        // Remove weight on 'to'
+        const bool erased = _nodes[to].remove_weight(from);
+        if (erased)
+        {
+            // Remove edge to 'to'
+            _nodes[from].remove_edge(to);
+
+            // Decrement connection count
+            _connections--;
+        }
     }
     inline static nneat<T, IN, OUT> breed(const nneat<T, IN, OUT> &p1, const nneat<T, IN, OUT> &p2)
     {
@@ -536,6 +560,10 @@ class nneat
             std::cout << "    value: " << node.output() << std::endl;
         }
     }
+    size_t get_connections() const
+    {
+        return _connections;
+    }
     size_t id() const
     {
         return _nodes.size();
@@ -544,6 +572,7 @@ class nneat
     {
         // Roll dice
         const unsigned r = ran.random_int();
+        const unsigned s = ran.random_int();
 
         // Between IN and END, even though OUT can't be a 'from'
         const unsigned from = ran.random_int() % _nodes.size();
@@ -555,6 +584,17 @@ class nneat
             const unsigned out = (ran.random_int() % OUT) + IN;
             add_node_between(from, out);
         }
+        else if (s % _s == 0)
+        {
+            // 'to' can't be an input
+            const unsigned not_input_size = _nodes.size() - IN;
+
+            // Between OUT and END
+            const unsigned to = (ran.random_int() % not_input_size) + IN;
+
+            // Remove connection between from and to
+            remove_connection(from, to);
+        }
         else
         {
             // 'to' can't be an input
@@ -562,6 +602,8 @@ class nneat
 
             // Between OUT and END
             const unsigned to = (ran.random_int() % not_input_size) + IN;
+
+            // Add connection between from and to
             add_connection(from, to);
         }
     }
@@ -604,6 +646,14 @@ class nneat
         {
             _nodes[i].randomize(ran);
         }
+    }
+    inline void set_connection_limit(const size_t limit)
+    {
+        _connection_limit = limit;
+    }
+    inline void set_node_limit(const size_t limit)
+    {
+        _node_limit = limit;
     }
     inline void set_input(const vector<T, IN> &input) const
     {
@@ -671,6 +721,13 @@ class nneat
         for (int i = 0; i < node_size; i++)
         {
             _nodes.emplace_back(data, start);
+        }
+
+        // Count all edge connections
+        _connections = 0;
+        for (int i = 0; i < node_size; i++)
+        {
+            _connections += _nodes[i].get_edges().size();
         }
     }
 };
