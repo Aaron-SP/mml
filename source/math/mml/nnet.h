@@ -261,6 +261,12 @@ class nnode
             // Mutate the bias with add
             _bias *= ran.mutation();
         }
+        else if (r % 11 == 0)
+        {
+            // Assign random values
+            _weights[index] = ran.random();
+            _bias = ran.random();
+        }
 
         // Check for weight and bias overflow
         range(_weights[index]);

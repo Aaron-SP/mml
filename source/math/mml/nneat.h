@@ -179,6 +179,12 @@ class nanode
             // Mutate the bias with add
             _bias *= ran.mutation();
         }
+        else if (r % 11 == 0)
+        {
+            // Assign random values
+            _weights[index] = ran.random();
+            _bias = ran.random();
+        }
 
         // Check for weight and bias overflow
         range(iter->second);
@@ -370,7 +376,7 @@ class nneat
             _nodes.emplace_back();
         }
     }
-    inline void add_connection(const size_t from, const size_t to)
+    inline void add_connection(const size_t from, const size_t to, const T value)
     {
         // Check connections are valid
         if (!prevent_cycles(from, to) || _connections > _connection_limit)
@@ -379,7 +385,7 @@ class nneat
         }
 
         // Try to connect weight between from and to, default weight 1.0
-        const bool inserted = _nodes[to].connect_weight(1.0, from);
+        const bool inserted = _nodes[to].connect_weight(value, from);
         if (!inserted)
         {
             // duplicate key, so don't add edge
@@ -416,10 +422,10 @@ class nneat
         remove_connection(from, to);
 
         // Connect from to new node
-        add_connection(from, last);
+        add_connection(from, last, 1.0);
 
         // Connect new node to 'to'
-        add_connection(last, to);
+        add_connection(last, to, 1.0);
     }
     inline void remove_connection(const size_t from, const size_t to)
     {
@@ -610,7 +616,8 @@ class nneat
             const unsigned to = (ran.random_int() % not_input_size) + IN;
 
             // Add connection between from and to
-            add_connection(from, to);
+            const T v = ran.random();
+            add_connection(from, to, v);
         }
     }
     inline void mutate_weight(mml::net_rng<T> &ran)

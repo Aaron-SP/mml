@@ -49,14 +49,14 @@ bool test_neural_net_augmented()
         }
 
         // Add three connections to nodes
-        net.add_connection(0, 3);
-        net.add_connection(1, 4);
-        net.add_connection(2, 5);
+        net.add_connection(0, 3, 1.0);
+        net.add_connection(1, 4, 1.0);
+        net.add_connection(2, 5, 1.0);
 
         // Test adding same connection twice no duplicate
-        net.add_connection(0, 3);
-        net.add_connection(1, 4);
-        net.add_connection(2, 5);
+        net.add_connection(0, 3, 1.0);
+        net.add_connection(1, 4, 1.0);
+        net.add_connection(2, 5, 1.0);
 
         // Test add connection
         output = net.calculate();
@@ -82,9 +82,9 @@ bool test_neural_net_augmented()
             throw std::runtime_error("Failed neat remove connection");
         }
 
-        net.add_connection(0, 3);
-        net.add_connection(1, 4);
-        net.add_connection(2, 5);
+        net.add_connection(0, 3, 1.0);
+        net.add_connection(1, 4, 1.0);
+        net.add_connection(2, 5, 1.0);
 
         // Test add connection
         output = net.calculate();
@@ -97,9 +97,9 @@ bool test_neural_net_augmented()
         }
 
         // Test faulty connection from output to input
-        net.add_connection(3, 0);
-        net.add_connection(4, 1);
-        net.add_connection(5, 2);
+        net.add_connection(3, 0, 1.0);
+        net.add_connection(4, 1, 1.0);
+        net.add_connection(5, 2, 1.0);
 
         // Test no change
         output = net.calculate();
@@ -127,7 +127,7 @@ bool test_neural_net_augmented()
         }
 
         // Test valid topology change
-        net.add_connection(6, 7);
+        net.add_connection(6, 7, 1.0);
 
         // Test create connection
         output = net.calculate();
