@@ -331,7 +331,7 @@ bool test_neural_net_fixed()
         }
 
         // This is still pretty far away from perfect, but good enough for a test
-        out = out && compare(359.107, total_error, 1E-3);
+        out = out && compare(359.33, total_error, 1E-3);
         if (!out)
         {
             throw std::runtime_error("Failed neural net 1x1 training sin(x) / x");
@@ -369,7 +369,7 @@ bool test_neural_net_fixed()
         }
 
         // This is still pretty far away from perfect, but good enough for a test
-        out = out && compare(359.107, total_error, 1E-3);
+        out = out && compare(359.33, total_error, 1E-3);
         if (!out)
         {
             throw std::runtime_error("Failed neural net 1x1 training sin(x) / x deserialize");

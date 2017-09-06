@@ -15,6 +15,7 @@ limitations under the License.
 #ifndef __NEURAL_NET_FIXED__
 #define __NEURAL_NET_FIXED__
 
+#include <algorithm>
 #include <functional>
 #include <iostream>
 #include <mml/nn.h>
@@ -28,6 +29,7 @@ template <typename T>
 class nnode
 {
   private:
+    static constexpr T _weight_range = 1E6;
     std::vector<T> _weights;
     std::vector<T> _delta_weights;
     mutable std::vector<T> _inputs;
@@ -36,6 +38,10 @@ class nnode
     mutable T _output;
     T _delta;
 
+    inline static void range(T &weight)
+    {
+        weight = std::max(-_weight_range, std::min(weight, _weight_range));
+    }
     inline static T transfer_deriv_identity(const T output)
     {
         return 1.0;
@@ -47,6 +53,15 @@ class nnode
     inline static T transfer_deriv_relu(const T output)
     {
         const T arg = -1.0 * output;
+        if (arg > 20.0)
+        {
+            return 0.0;
+        }
+        else if (arg < -20.0)
+        {
+            return 1.0;
+        }
+
         return 1.0 / (1.0 + std::exp(arg));
     }
     inline static T transfer_relu(const T input)
@@ -60,6 +75,15 @@ class nnode
     inline static T transfer_sigmoid(const T input)
     {
         const T arg = -1.0 * input;
+        if (arg > 20.0)
+        {
+            return 0.0;
+        }
+        else if (arg < -20.0)
+        {
+            return 1.0;
+        }
+
         return 1.0 / (1.0 + std::exp(arg));
     }
     inline static T transfer_deriv_tanh(const T output)
@@ -69,6 +93,15 @@ class nnode
     inline static T transfer_tanh(const T input)
     {
         const T arg = -2.0 * input;
+        if (arg > 20.0)
+        {
+            return 0.0;
+        }
+        else if (arg < -20.0)
+        {
+            return 1.0;
+        }
+
         return (2.0 / (1.0 + std::exp(arg))) - 1.0;
     }
     inline void backprop(const T step_size)
@@ -111,21 +144,19 @@ class nnode
         const size_t size = n._weights.size();
         for (size_t i = 0; i < size; i++)
         {
-            const T product = std::abs(_weights[i] * n._weights[i]);
+            // average weights
+            _weights[i] = (_weights[i] + n._weights[i]) * 0.5;
 
-            // Negative weights are dominant
-            T sign = 1.0;
-            if (_weights[i] < 0.0 || n._weights[i] < 0.0)
-            {
-                sign = -1.0;
-            }
-
-            // geometric mean
-            _weights[i] = sign * std::sqrt(product);
+            // Check for weight overflow
+            range(_weights[i]);
         }
 
-        // average
+        // average bias
         _bias = (_bias + n._bias) * 0.5;
+
+        // Check for bias overflow
+        range(_bias);
+
         return *this;
     }
     inline void backprop_identity(const T propagated, const T step_size)
@@ -218,7 +249,7 @@ class nnode
         else if (r % 3 == 0)
         {
             // Mutate the bias with mult
-            _bias *= ran.mutation();
+            _bias += ran.mutation();
         }
         else if (r % 5 == 0)
         {
@@ -228,18 +259,12 @@ class nnode
         else if (r % 7 == 0)
         {
             // Mutate the bias with add
-            _bias += ran.mutation();
+            _bias *= ran.mutation();
         }
-        else if (r % 11 == 0)
-        {
-            // Mutate the weight with sub
-            _weights[index] -= ran.mutation();
-        }
-        else if (r % 13 == 0)
-        {
-            // Mutate the bias with sub
-            _bias -= ran.mutation();
-        }
+
+        // Check for weight and bias overflow
+        range(_weights[index]);
+        range(_bias);
     }
     inline T output() const
     {
@@ -617,6 +642,19 @@ class nnet
         // Print out bias
         std::cout << "Bias " << _layers[i][j].get_bias() << std::endl;
     }
+    void debug_connections() const
+    {
+        // Print out entire neural net
+        const size_t layers = _layers.size();
+        for (size_t i = 0; i < layers; i++)
+        {
+            const size_t nodes = _layers[i].size();
+            for (size_t j = 0; j < nodes; j++)
+            {
+                debug_weights(i, j);
+            }
+        }
+    }
     inline T get_output(const size_t i, const size_t j) const
     {
         return _layers[i][j].output();
@@ -705,6 +743,9 @@ class nnet
     }
     inline void deserialize(const std::vector<T> &data)
     {
+        // Unfinalize the net
+        _final = false;
+
         // Use int here, in case someone feeds in garbage data
         // Check input size
         const int in = static_cast<int>(data[0]);
@@ -717,7 +758,7 @@ class nnet
         const int out = static_cast<int>(data[1]);
         if (out != OUT)
         {
-            throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(OUT) + "' but got '" + std::to_string(out) + "'");
+            throw std::runtime_error("nnet: can't deserialize, expected output '" + std::to_string(OUT) + "' but got '" + std::to_string(out) + "'");
         }
 
         // Clear the layers
@@ -728,7 +769,7 @@ class nnet
         const int last = data[2 + size];
         if (last != OUT)
         {
-            throw std::runtime_error("nnet: can't deserialize, expected input '" + std::to_string(OUT) + "' but got '" + std::to_string(last) + "'");
+            throw std::runtime_error("nnet: can't deserialize, expected last size '" + std::to_string(OUT) + "' but got '" + std::to_string(last) + "'");
         }
 
         // Count bytes

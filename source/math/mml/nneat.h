@@ -30,15 +30,29 @@ template <typename T>
 class nanode
 {
   private:
+    static constexpr T _weight_range = 1E6;
     std::vector<size_t> _edges;
     std::map<size_t, T> _weights;
     T _bias;
     mutable T _sum;
     mutable T _output;
 
+    inline static void range(T &weight)
+    {
+        weight = std::max(-_weight_range, std::min(weight, _weight_range));
+    }
     inline static T transfer_sigmoid(const T input)
     {
         const T arg = -1.0 * input;
+        if (arg > 20.0)
+        {
+            return 0.0;
+        }
+        else if (arg < -20.0)
+        {
+            return 1.0;
+        }
+
         return 1.0 / (1.0 + std::exp(arg));
     }
 
@@ -147,31 +161,28 @@ class nanode
         // Mutate the node based on type
         if (r % 2 == 0)
         {
-            iter->second *= ran.mutation();
+            // Mutate the weight with mult
+            _weights[index] *= ran.mutation();
         }
         else if (r % 3 == 0)
         {
             // Mutate the bias with mult
-            _bias *= ran.mutation();
+            _bias += ran.mutation();
         }
         else if (r % 5 == 0)
         {
-            iter->second += ran.mutation();
+            // Mutate the weight with add
+            _weights[index] += ran.mutation();
         }
         else if (r % 7 == 0)
         {
             // Mutate the bias with add
-            _bias += ran.mutation();
+            _bias *= ran.mutation();
         }
-        else if (r % 11 == 0)
-        {
-            iter->second -= ran.mutation();
-        }
-        else if (r % 13 == 0)
-        {
-            // Mutate the bias with sub
-            _bias -= ran.mutation();
-        }
+
+        // Check for weight and bias overflow
+        range(iter->second);
+        range(_bias);
     }
     inline nanode<T> &operator*=(const nanode<T> &n)
     {
@@ -185,19 +196,11 @@ class nanode
         // Perform weight and bias crossover
         for (size_t i = 0; i < size; i++)
         {
-            const float &w1 = it1->second;
-            const float &w2 = it2->second;
-            const T product = std::abs(w1 * w2);
+            // average weights
+            it1->second = (it1->second + it2->second) * 0.5;
 
-            // Negative weights are dominant
-            T sign = 1.0;
-            if (w1 < 0.0 || w2 < 0.0)
-            {
-                sign = -1.0;
-            }
-
-            // geometric mean weights
-            it1->second = sign * std::sqrt(product);
+            // Check for weight overflow
+            range(it1->second);
 
             // Increment iterators
             it1++;
@@ -206,6 +209,9 @@ class nanode
 
         // average bias
         _bias = (_bias + n._bias) * 0.5;
+
+        // Check for bias overflow
+        range(_bias);
 
         // return this node
         return *this;
