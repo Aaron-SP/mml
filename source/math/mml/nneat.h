@@ -142,7 +142,7 @@ class nanode
     }
     T get_weight(const size_t index) const
     {
-        // Check if key exists and erase
+        // Check if key exists or throw error
         const auto w_iter = _weights.find(index);
         if (w_iter != _weights.end())
         {
@@ -177,7 +177,7 @@ class nanode
         if (r % 2 == 0)
         {
             // Mutate the weight with mult
-            _weights[index] *= ran.mutation();
+            iter->second *= ran.mutation();
         }
         else if (r % 3 == 0)
         {
@@ -187,7 +187,7 @@ class nanode
         else if (r % 5 == 0)
         {
             // Mutate the weight with add
-            _weights[index] += ran.mutation();
+            iter->second += ran.mutation();
         }
         else if (r % 7 == 0)
         {
@@ -197,7 +197,7 @@ class nanode
         else if (r % 11 == 0)
         {
             // Assign random values
-            _weights[index] = ran.random();
+            iter->second = ran.random();
             _bias = ran.random();
         }
 
@@ -260,6 +260,14 @@ class nanode
     const std::vector<size_t> &get_edges() const
     {
         return _edges;
+    }
+    size_t get_edge_size() const
+    {
+        return _edges.size();
+    }
+    size_t get_weight_size() const
+    {
+        return _weights.size();
     }
     T output() const
     {
@@ -347,8 +355,6 @@ class nneat
     }
     inline bool prevent_cycles(const size_t from, const size_t to) const
     {
-        bool out = true;
-
         // Can't connect output to anything
         if (from < (OUT + IN) && from >= IN)
         {
@@ -369,7 +375,7 @@ class nneat
             return false;
         }
 
-        return out;
+        return true;
     }
 
   public:
@@ -630,6 +636,12 @@ class nneat
                 // Between OUT and END
                 const unsigned to = (ran.random_int() % not_input_size) + IN;
 
+                // Skip invalid connections, to prevent draining connections
+                if (!prevent_cycles(i, to))
+                {
+                    continue;
+                }
+
                 // Read old 'to' node
                 const size_t old_to = e[j];
 
@@ -803,11 +815,19 @@ class nneat
             _nodes.emplace_back(data, start);
         }
 
-        // Count all edge connections
+        // Count all edge connections and weights for mismatch
         _connections = 0;
+        size_t weights = 0;
         for (int i = 0; i < node_size; i++)
         {
-            _connections += _nodes[i].get_edges().size();
+            _connections += _nodes[i].get_edge_size();
+            weights += _nodes[i].get_weight_size();
+        }
+
+        // Check that edges equal number of weights
+        if (_connections != weights)
+        {
+            throw std::runtime_error("nneat: can't deserialize, weights and edges are mismatched");
         }
     }
 };
