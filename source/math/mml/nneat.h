@@ -140,6 +140,21 @@ class nanode
     {
         _output = out;
     }
+    T get_weight(const size_t index) const
+    {
+        // Check if key exists and erase
+        const auto w_iter = _weights.find(index);
+        if (w_iter != _weights.end())
+        {
+            return w_iter->second;
+        }
+        else
+        {
+            throw std::runtime_error("nanode: get_weight: asking for weight that doesn't exist!");
+        }
+
+        return 0.0;
+    }
     void mutate(mml::net_rng<T> &ran)
     {
         // Don't mutate if no connections
@@ -317,8 +332,9 @@ class nneat
     unsigned _q;
     unsigned _r;
     unsigned _s;
+    unsigned _t;
 
-    bool output_node(const size_t to)
+    inline bool output_node(const size_t to)
     {
         bool out = false;
 
@@ -329,7 +345,7 @@ class nneat
 
         return out;
     }
-    bool prevent_cycles(const size_t from, const size_t to) const
+    inline bool prevent_cycles(const size_t from, const size_t to) const
     {
         bool out = true;
 
@@ -360,7 +376,7 @@ class nneat
     nneat()
         : _connections(0),
           _connection_limit(500), _node_limit(500),
-          _q(29.0), _r(7.0), _s(3.0)
+          _q(3.0), _r(7.0), _s(5.0), _t(7.0)
     {
         // Create input nodes
         for (size_t i = 0; i < IN; i++)
@@ -384,7 +400,7 @@ class nneat
             return;
         }
 
-        // Try to connect weight between from and to, default weight 1.0
+        // Try to connect weight between from and to
         const bool inserted = _nodes[to].connect_weight(value, from);
         if (!inserted)
         {
@@ -442,48 +458,64 @@ class nneat
     }
     inline static nneat<T, IN, OUT> breed(const nneat<T, IN, OUT> &p1, const nneat<T, IN, OUT> &p2)
     {
-        // Initialize dimensions with p1
-        nneat<T, IN, OUT> out = p1;
+        // Output network
+        nneat<T, IN, OUT> out;
 
-        // Recursive traversal of DAG
-        std::function<void(const nanode<T> &node1, const nanode<T> &node2)> dfs;
-        dfs = [&dfs, &out, &p2](const nanode<T> &node1, const nanode<T> &node2) {
+        // Parent with least nodes
+        const nneat<T, IN, OUT> *parent = nullptr;
 
-            // Get all edges on nodes
-            const std::vector<size_t> &e1 = node1.get_edges();
-            const std::vector<size_t> &e2 = node2.get_edges();
-            const size_t edges = std::min(e1.size(), e2.size());
-            for (size_t i = 0; i < edges; i++)
+        // Choose parent with the most nodes as the base
+        if (p1._nodes.size() > p2._nodes.size())
+        {
+            out = p1;
+            parent = &p2;
+        }
+        else
+        {
+            out = p2;
+            parent = &p1;
+        }
+
+        // Look for disjoint edges and join them
+        const size_t nodes = parent->_nodes.size();
+        for (size_t i = 0; i < nodes; i++)
+        {
+            // Get all edges on each node
+            const std::vector<size_t> &e = out._nodes[i].get_edges();
+            const std::vector<size_t> &pe = parent->_nodes[i].get_edges();
+
+            // Search common edges for disjointness
+            const size_t edges = std::min(e.size(), pe.size());
+            for (size_t j = 0; j < edges; j++)
             {
-                // Get edge index
-                const size_t i1 = e1[i];
-                const size_t i2 = e2[i];
-
-                // If these are the same node in DAG
-                if (i1 == i2)
+                // disjoint, safe because we have max nodes of both parents
+                if (e[j] != pe[j])
                 {
-                    // Get next nodes
-                    nanode<T> &en1 = out._nodes[i1];
-                    const nanode<T> &en2 = p2._nodes[i2];
+                    // Get the weight value of connection
+                    const T value = parent->_nodes[pe[j]].get_weight(i);
 
-                    // Perform cross over
-                    en1 *= en2;
-
-                    // Recurse
-                    dfs(en1, en2);
+                    // Add connection between nodes
+                    out.add_connection(i, pe[j], value);
                 }
             }
-        };
 
-        // Crossover node by node
-        for (size_t i = 0; i < IN; i++)
+            // For the remaining disjoint edges
+            const size_t remain = pe.size();
+            const size_t start = e.size();
+            for (size_t j = start; j < remain; j++)
+            {
+                // Get the weight value of connection
+                const T value = parent->_nodes[pe[j]].get_weight(i);
+
+                // Add connection between nodes
+                out.add_connection(i, pe[j], value);
+            }
+        }
+
+        // Perform node-wise crossover
+        for (size_t i = 0; i < nodes; i++)
         {
-            // Get next nodes
-            const nanode<T> &node1 = p1._nodes[i];
-            const nanode<T> &node2 = p2._nodes[i];
-
-            // Call recursion
-            dfs(node1, node2);
+            out._nodes[i] *= parent->_nodes[i];
         }
 
         return out;
@@ -566,25 +598,56 @@ class nneat
             for (const auto e : edges)
             {
                 std::cout << "    -> " << e << std::endl;
+                std::cout << "    weight: " << _nodes[e].get_weight(i) << std::endl;
             }
 
             // Write node output
             std::cout << "    value: " << node.output() << std::endl;
         }
     }
-    size_t get_connections() const
+    inline size_t get_connections() const
     {
         return _connections;
     }
-    size_t id() const
+    inline size_t get_nodes() const
     {
         return _nodes.size();
+    }
+    inline void mutate_connections(mml::net_rng<T> &ran)
+    {
+        // 'to' can't be an input
+        const unsigned not_input_size = _nodes.size() - IN;
+
+        // Radically shake things up
+        const size_t nodes = _nodes.size();
+        for (size_t i = 0; i < nodes; i++)
+        {
+            // Output nodes should not have any edges
+            const std::vector<size_t> &e = _nodes[i].get_edges();
+            const size_t edges = e.size();
+            for (size_t j = 0; j < edges; j++)
+            {
+                // Between OUT and END
+                const unsigned to = (ran.random_int() % not_input_size) + IN;
+
+                // Read old 'to' node
+                const size_t old_to = e[j];
+
+                // Remove this connection
+                remove_connection(i, old_to);
+
+                // Add new connection
+                const T v = ran.random();
+                add_connection(i, to, v);
+            }
+        }
     }
     inline void mutate_topology(mml::net_rng<T> &ran)
     {
         // Roll dice
         const unsigned r = ran.random_int();
         const unsigned s = ran.random_int();
+        const unsigned t = ran.random_int();
 
         // Between IN and END, even though OUT can't be a 'from'
         const unsigned from = ran.random_int() % _nodes.size();
@@ -606,6 +669,11 @@ class nneat
 
             // Remove connection between from and to
             remove_connection(from, to);
+        }
+        else if (t % _t == 0)
+        {
+            // Mutate connections
+            mutate_connections(ran);
         }
         else
         {
@@ -635,11 +703,9 @@ class nneat
     inline void mutate(mml::net_rng<T> &ran)
     {
         const unsigned q = ran.random_int();
-        const unsigned r = ran.random_int();
-        const unsigned s = ran.random_int();
 
         // choose mutation type, weight mutations are more probable
-        if ((q % _q == 0) && (r % _r == 0) && (s % _s == 0))
+        if (q % _q == 0)
         {
             mutate_topology(ran);
         }
@@ -677,11 +743,12 @@ class nneat
             _nodes[i].fixed(input[i]);
         }
     }
-    void set_topology_constants(const unsigned q, const unsigned r, const unsigned s)
+    void set_topology_constants(const unsigned q, const unsigned r, const unsigned s, const unsigned t)
     {
         _q = q;
         _r = r;
         _s = s;
+        _t = t;
     }
     inline std::vector<T> serialize() const
     {

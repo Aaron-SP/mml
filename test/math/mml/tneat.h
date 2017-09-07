@@ -37,6 +37,11 @@ bool test_neural_net_augmented()
         mml::vector<double, 3> output;
         mml::vector<double, 3> cached_output;
 
+        // Set topology constants
+        net.set_topology_constants(1, 3, 3, 5);
+        net2.set_topology_constants(1, 3, 3, 5);
+        net3.set_topology_constants(1, 3, 3, 5);
+
         // Test default calculate
         net.set_input(in);
         output = net.calculate();
@@ -215,7 +220,7 @@ bool test_neural_net_augmented()
         }
 
         // Test serialize neural net
-        size_t net_id = net.id();
+        size_t net_size = net.get_nodes();
         cached_output = net.calculate();
         std::vector<double> data = net.serialize();
         out = out && compare(51, data.size());
@@ -236,21 +241,21 @@ bool test_neural_net_augmented()
             throw std::runtime_error("Failed neat deserialize calculate 1");
         }
 
-        // Test ID match
-        out = out && compare(net2.id(), net_id);
+        // Test node size match
+        out = out && compare(net2.get_nodes(), net_size);
         if (!out)
         {
-            throw std::runtime_error("Failed neat serialize id match 1");
+            throw std::runtime_error("Failed neat serialize node size match 1");
         }
 
         // Test serialize neural net3
         const size_t connections = net3.get_connections();
-        net_id = net3.id();
+        net_size = net3.get_nodes();
         cached_output = net3.calculate();
         data = net3.serialize();
 
         // Test connection count
-        out = out && compare(7, connections, 1E-4);
+        out = out && !compare(7, connections, 1E-4);
         if (!out)
         {
             throw std::runtime_error("Failed neat serialize connection count");
@@ -268,15 +273,15 @@ bool test_neural_net_augmented()
             throw std::runtime_error("Failed neat deserialize calculate 2");
         }
 
-        // Test ID match
-        out = out && compare(net2.id(), net_id);
+        // Test node size match
+        out = out && compare(net2.get_nodes(), net_size);
         if (!out)
         {
-            throw std::runtime_error("Failed neat serialize id match 2");
+            throw std::runtime_error("Failed neat serialize node size match 2");
         }
 
         // Test connection count
-        out = out && compare(7, net2.get_connections(), 1E-4);
+        out = out && compare(connections, net2.get_connections(), 1E-4);
         if (!out)
         {
             throw std::runtime_error("Failed neat deserialize connection count");
