@@ -624,34 +624,37 @@ class nneat
         // 'to' can't be an input
         const unsigned not_input_size = _nodes.size() - IN;
 
-        // Radically shake things up
-        const size_t nodes = _nodes.size();
-        for (size_t i = 0; i < nodes; i++)
+        // Between IN and END, even though OUT can't be a 'from'
+        const unsigned from = ran.random_int() % _nodes.size();
+
+        // Between OUT and END
+        const unsigned to = (ran.random_int() % not_input_size) + IN;
+
+        // Skip invalid connections, to prevent draining connections
+        if (!prevent_cycles(from, to))
         {
-            // Output nodes should not have any edges
-            const std::vector<size_t> &e = _nodes[i].get_edges();
-            const size_t edges = e.size();
-            for (size_t j = 0; j < edges; j++)
-            {
-                // Between OUT and END
-                const unsigned to = (ran.random_int() % not_input_size) + IN;
+            return;
+        }
 
-                // Skip invalid connections, to prevent draining connections
-                if (!prevent_cycles(i, to))
-                {
-                    continue;
-                }
+        // Get all edges on node
+        const std::vector<size_t> &e = _nodes[from].get_edges();
+        const size_t edges = e.size();
 
-                // Read old 'to' node
-                const size_t old_to = e[j];
+        // Output nodes should not have any edges
+        if (edges > 0)
+        {
+            // Calculate random index
+            const unsigned j = (ran.random_int() % edges);
 
-                // Remove this connection
-                remove_connection(i, old_to);
+            // Read old 'to' node
+            const size_t old_to = e[j];
 
-                // Add new connection
-                const T v = ran.random();
-                add_connection(i, to, v);
-            }
+            // Remove this connection
+            remove_connection(from, old_to);
+
+            // Add new connection
+            const T v = ran.random();
+            add_connection(from, to, v);
         }
     }
     inline void mutate_topology(mml::net_rng<T> &ran)
@@ -684,7 +687,7 @@ class nneat
         }
         else if (t % _t == 0)
         {
-            // Mutate connections
+            // Mutate connections on a single node
             mutate_connections(ran);
         }
         else
