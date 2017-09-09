@@ -214,9 +214,11 @@ class evolution
             const size_t j = _rng.random_int() % _species;
             const size_t k = _rng.random_int() % _species_size;
 
-            // Mutate any net without restriction
-            // Preserving top genetics causes simulation to get stuck
-            _nets[j][k].mutate(_rng);
+            // Validation set has better convergence when preserving top species
+            if (k != _species_top[j])
+            {
+                _nets[j][k].mutate(_rng);
+            }
         }
 
         // Increment year count
