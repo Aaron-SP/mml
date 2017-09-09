@@ -14,6 +14,7 @@ limitations under the License.
 */
 #include <iostream>
 #include <mml/tequation.h>
+#include <mml/tevolution_neat.h>
 #include <mml/tmat.h>
 #include <mml/tmult.h>
 #include <mml/tneat.h>
@@ -27,6 +28,7 @@ int main()
     {
         bool out = true;
         out = out && test_matrix();
+        out = out && test_evolve_neat();
         out = out && test_neural_net_augmented();
         out = out && test_neural_net_fixed();
         out = out && test_vector();

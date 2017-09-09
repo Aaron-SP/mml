@@ -382,7 +382,7 @@ class nneat
     nneat()
         : _connections(0),
           _connection_limit(500), _node_limit(500),
-          _q(3.0), _r(7.0), _s(5.0), _t(7.0)
+          _q(11), _r(13), _s(11), _t(3)
     {
         // Create input nodes
         for (size_t i = 0; i < IN; i++)
@@ -636,7 +636,7 @@ class nneat
             return;
         }
 
-        // Get all edges on node
+        // Get a random edge on node
         const std::vector<size_t> &e = _nodes[from].get_edges();
         const size_t edges = e.size();
 
@@ -652,7 +652,7 @@ class nneat
             // Remove this connection
             remove_connection(from, old_to);
 
-            // Add new connection
+            // Add new connection with random weight
             const T v = ran.random();
             add_connection(from, to, v);
         }
