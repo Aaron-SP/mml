@@ -203,9 +203,16 @@ class evolution
         }
 
         // Calculate mutations from max fitness
-        const T one = 1.0;
-        const T approx_max_fitness = std::max(one, std::abs(_average_top - _average_fitness));
-        _mutations = (_mutation_rate / approx_max_fitness);
+        if (_average_fitness > 0.0)
+        {
+            const T one = 1.0;
+            const T approx_max_fitness = std::max(one, std::abs(_average_top - _average_fitness));
+            _mutations = (_mutation_rate / approx_max_fitness);
+        }
+        else
+        {
+            _mutations = _mutation_rate;
+        }
 
         // Mutate random nets
         for (size_t i = 0; i < _mutations; i++)
