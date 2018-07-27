@@ -136,9 +136,24 @@ class nnode
     nnode(const size_t size)
         : _weights(size, 1.0), _delta_weights(size, 0), _inputs(size, 0),
           _bias(0.0), _sum(0.0), _output(0.0), _delta(0.0) {}
-    nnode(const std::vector<T> &weights, const T bias)
-        : _weights(weights), _delta_weights(weights.size(), 0), _inputs(weights.size(), 0),
-          _bias(bias), _sum(0.0), _output(0.0), _delta(0.0) {}
+    inline void reset(mml::net_rng<T> &ran)
+    {
+        // Randomize weights
+        for (T &w : _weights)
+        {
+            w = ran.random();
+        }
+
+        // Zero out weights vectors
+        std::fill(_delta_weights.begin(), _delta_weights.end(), 0.0);
+        std::fill(_inputs.begin(), _inputs.end(), 0.0);
+
+        // Reset node values
+        _bias = ran.random();
+        _sum = 0.0;
+        _output = 0.0;
+        _delta = 0.0;
+    }
     inline nnode<T> &operator*=(const nnode<T> &n)
     {
         const size_t size = n._weights.size();
@@ -232,6 +247,10 @@ class nnode
     {
         return _weights;
     }
+    inline std::vector<T> &get_weights()
+    {
+        return _weights;
+    }
     void mutate(mml::net_rng<T> &ran)
     {
         // Calculate a mutation type
@@ -280,6 +299,10 @@ class nnode
     {
         // Reset the node
         zero();
+    }
+    inline void set_bias(const T bias)
+    {
+        _bias = bias;
     }
     inline void sum(const T input, const size_t index) const
     {
@@ -692,8 +715,8 @@ class nnet
     inline void randomize(mml::net_rng<T> &ran)
     {
         const auto f = [&ran](nnode<T> &node, const size_t i, const size_t j) {
-            const size_t inputs = node.get_inputs();
-            node = nnode<T>(ran.random(inputs), ran.random());
+            // Randomize weights
+            node.reset(ran);
         };
 
         // Randomize the net
@@ -818,15 +841,20 @@ class nnet
         // Starting index, assign values to net
         size_t index = 3 + size;
         const auto f = [&data, &index](nnode<T> &node, const size_t i, const size_t j) {
-            // Copy all weights from data to nnode
+            // Create a new node
             const size_t size = node.get_inputs();
-            std::vector<T> weights(size);
+            node = nnode<T>(size);
+
+            // Copy weights from input stream
+            std::vector<T> &weights = node.get_weights();
             for (size_t k = 0; k < size; k++)
             {
                 weights[k] = data[index];
                 index++;
             }
-            node = nnode<T>(weights, data[index]);
+
+            // Set the node bias
+            node.set_bias(data[index]);
             index++;
         };
 
@@ -837,6 +865,6 @@ class nnet
         _final = true;
     }
 };
-}
+} // namespace mml
 
 #endif

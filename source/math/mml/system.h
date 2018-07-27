@@ -31,7 +31,8 @@ class system
     T _tolerance;
 
   public:
-    system(const equation<T, N, numeric> eqs[N]) : _max_iterations(100), _tolerance(1E-4)
+    system(const equation<T, N, numeric> eqs[N])
+        : _max_iterations(100), _tolerance(1E-4)
     {
         // Copy all functions
         for (size_t i = 0; i < N; i++)
@@ -41,7 +42,7 @@ class system
     }
     inline matrix<T, N, N> jacobian(const vector<T, N> &x, const T dx) const
     {
-        // return jacobian matrix of system
+        // Return jacobian matrix of system
         return numeric<T, N>::jacobian(_system, x, dx);
     }
     inline vector<T, N> evaluate(const vector<T, N> &x) const
@@ -90,10 +91,10 @@ class system
             }
         }
 
-        // return the sums square of the x values, should be close to zero at solution
+        // Return the sums square of the x values, should be close to zero at solution
         return convergence;
     }
 };
-}
+} // namespace mml
 
 #endif

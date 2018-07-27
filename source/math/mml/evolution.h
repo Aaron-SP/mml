@@ -44,12 +44,12 @@ class evolution
     std::pair<size_t, size_t> _top;
     T _average_top;
     T _average_fitness;
-    mutable bool _cataclysm;
-    mutable unsigned _mutations;
-    mutable net_rng<T> _rng;
-    mutable net<T, IN, OUT> _top_net;
-    mutable T _top_score;
-    mutable unsigned _year;
+    bool _cataclysm;
+    unsigned _mutations;
+    net_rng<T> _rng;
+    net<T, IN, OUT> _top_net;
+    T _top_score;
+    unsigned _year;
 
     void average_fitness_score()
     {
@@ -291,6 +291,6 @@ class evolution
         return _average_fitness;
     }
 };
-}
+} // namespace mml
 
 #endif

@@ -49,7 +49,7 @@ class equation
     // where B = 0.75, alpha = 0.5, dx = -grad(x)
     // This equation assumes the function is *strongly convex* and may not apply for all functions
     // If this function doesn't work, it is recommended to calculate the Hessian for quadratic convergence
-    inline T min_fast(const vector<T, N> &x0, vector<T, N> &x1, const size_t iterations, const T tolerance)
+    inline T min_fast(const vector<T, N> &x0, vector<T, N> &x1, const size_t iterations, const T tolerance) const
     {
         // Start searching for all equations = 0
         x1 = x0;
@@ -87,7 +87,7 @@ class equation
             }
         }
 
-        // return the sum square of the function gradient, should be close to zero at solution
+        // Return the sum square of the function gradient, should be close to zero at solution
         return convergence;
     }
 
@@ -96,7 +96,7 @@ class equation
     // This method can be quite slow for higher dimensions
     // If equation is strongly convex, use min_fast instead as it converges exponentially with faster iteration times.
     // However min_fast will perform more iterations on average
-    inline T min(const vector<T, N> &x0, vector<T, N> &x1, const size_t iterations, const T tolerance)
+    inline T min(const vector<T, N> &x0, vector<T, N> &x1, const size_t iterations, const T tolerance) const
     {
         // Start searching for minimum of equation
         x1 = x0;
@@ -129,9 +129,9 @@ class equation
             }
         }
 
-        // return the sum square of the x values, should be close to zero at solution
+        // Return the sum square of the x values, should be close to zero at solution
         return convergence;
     }
 };
-}
+} // namespace mml
 #endif

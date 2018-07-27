@@ -20,7 +20,6 @@ limitations under the License.
 #include <mml/system.h>
 #include <mml/test.h>
 #include <mml/vec.h>
-#include <stdexcept>
 
 double f1(const mml::vector<double, 3> &x)
 {
@@ -41,7 +40,7 @@ bool test_system()
 {
     bool out = true;
 
-    // backward gradient test
+    // Backward gradient test
     {
         // Create equation array
         mml::equation<double, 3, mml::backward> eqs[3] = {f1, f2, f3};
@@ -55,28 +54,20 @@ bool test_system()
 
         // Test system evaluate, should be (0.0, 0.0, 0.0)
         mml::vector<double, 3> y = system.evaluate(x);
-        out = out && compare(0.0, y[0], 1E-4);
-        out = out && compare(0.0, y[1], 1E-4);
-        out = out && compare(0.0, y[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix backward identity");
-        }
+        out = out && test(0.0, y[0], 1E-4, "Failed matrix backward identity");
+        out = out && test(0.0, y[1], 1E-4, "Failed matrix backward identity");
+        out = out && test(0.0, y[2], 1E-4, "Failed matrix backward identity");
 
         mml::matrix<double, 3, 3> j = system.jacobian(y, 0.1);
-        out = out && compare(1.0, j.get(0, 0), 1E-4);
-        out = out && compare(2.0, j.get(0, 1), 1E-4);
-        out = out && compare(-2.0, j.get(0, 2), 1E-4);
-        out = out && compare(2.0, j.get(1, 0), 1E-4);
-        out = out && compare(1.0, j.get(1, 1), 1E-4);
-        out = out && compare(-5.0, j.get(1, 2), 1E-4);
-        out = out && compare(1.0, j.get(2, 0), 1E-4);
-        out = out && compare(-4.0, j.get(2, 1), 1E-4);
-        out = out && compare(1.0, j.get(2, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix backward jacobian");
-        }
+        out = out && test(1.0, j.get(0, 0), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(2.0, j.get(0, 1), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(-2.0, j.get(0, 2), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(2.0, j.get(1, 0), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(1.0, j.get(1, 1), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(-5.0, j.get(1, 2), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(1.0, j.get(2, 0), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(-4.0, j.get(2, 1), 1E-4, "Failed matrix backward jacobian");
+        out = out && test(1.0, j.get(2, 2), 1E-4, "Failed matrix backward jacobian");
 
         // Test solving the root of system of equations
         mml::vector<double, 3> x0(10.0);
@@ -84,17 +75,13 @@ bool test_system()
 
         // Test zero
         double convergence = system.zero(x0, x1);
-        out = out && compare(0.0, convergence, 1E-7);
-        out = out && compare(-1.0, x1[0], 1E-4);
-        out = out && compare(-4.0, x1[1], 1E-4);
-        out = out && compare(3.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix backward zero");
-        }
+        out = out && test(0.0, convergence, 1E-7, "Failed matrix backward zero");
+        out = out && test(-1.0, x1[0], 1E-4, "Failed matrix backward zero");
+        out = out && test(-4.0, x1[1], 1E-4, "Failed matrix backward zero");
+        out = out && test(3.0, x1[2], 1E-4, "Failed matrix backward zero");
     }
 
-    // center gradient test
+    // Center gradient test
     {
         // Create equation array
         mml::equation<double, 3, mml::center> eqs[3] = {f1, f2, f3};
@@ -108,28 +95,20 @@ bool test_system()
 
         // Test system evaluate, should be (0.0, 0.0, 0.0)
         mml::vector<double, 3> y = system.evaluate(x);
-        out = out && compare(0.0, y[0], 1E-4);
-        out = out && compare(0.0, y[1], 1E-4);
-        out = out && compare(0.0, y[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix center identity");
-        }
+        out = out && test(0.0, y[0], 1E-4, "Failed matrix center identity");
+        out = out && test(0.0, y[1], 1E-4, "Failed matrix center identity");
+        out = out && test(0.0, y[2], 1E-4, "Failed matrix center identity");
 
         mml::matrix<double, 3, 3> j = system.jacobian(y, 0.1);
-        out = out && compare(1.0, j.get(0, 0), 1E-4);
-        out = out && compare(2.0, j.get(0, 1), 1E-4);
-        out = out && compare(-2.0, j.get(0, 2), 1E-4);
-        out = out && compare(2.0, j.get(1, 0), 1E-4);
-        out = out && compare(1.0, j.get(1, 1), 1E-4);
-        out = out && compare(-5.0, j.get(1, 2), 1E-4);
-        out = out && compare(1.0, j.get(2, 0), 1E-4);
-        out = out && compare(-4.0, j.get(2, 1), 1E-4);
-        out = out && compare(1.0, j.get(2, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix center jacobian");
-        }
+        out = out && test(1.0, j.get(0, 0), 1E-4, "Failed matrix center jacobian");
+        out = out && test(2.0, j.get(0, 1), 1E-4, "Failed matrix center jacobian");
+        out = out && test(-2.0, j.get(0, 2), 1E-4, "Failed matrix center jacobian");
+        out = out && test(2.0, j.get(1, 0), 1E-4, "Failed matrix center jacobian");
+        out = out && test(1.0, j.get(1, 1), 1E-4, "Failed matrix center jacobian");
+        out = out && test(-5.0, j.get(1, 2), 1E-4, "Failed matrix center jacobian");
+        out = out && test(1.0, j.get(2, 0), 1E-4, "Failed matrix center jacobian");
+        out = out && test(-4.0, j.get(2, 1), 1E-4, "Failed matrix center jacobian");
+        out = out && test(1.0, j.get(2, 2), 1E-4, "Failed matrix center jacobian");
 
         // Test solving the root of system of equations
         mml::vector<double, 3> x0(10.0);
@@ -137,17 +116,13 @@ bool test_system()
 
         // Test zero
         double convergence = system.zero(x0, x1);
-        out = out && compare(0.0, convergence, 1E-7);
-        out = out && compare(-1.0, x1[0], 1E-4);
-        out = out && compare(-4.0, x1[1], 1E-4);
-        out = out && compare(3.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix center zero");
-        }
+        out = out && test(0.0, convergence, 1E-7, "Failed matrix center zero");
+        out = out && test(-1.0, x1[0], 1E-4, "Failed matrix center zero");
+        out = out && test(-4.0, x1[1], 1E-4, "Failed matrix center zero");
+        out = out && test(3.0, x1[2], 1E-4, "Failed matrix center zero");
     }
 
-    // forward gradient test
+    // Forward gradient test
     {
         // Create equation array
         mml::equation<double, 3, mml::forward> eqs[3] = {f1, f2, f3};
@@ -161,28 +136,20 @@ bool test_system()
 
         // Test system evaluate, should be (0.0, 0.0, 0.0)
         mml::vector<double, 3> y = system.evaluate(x);
-        out = out && compare(0.0, y[0], 1E-4);
-        out = out && compare(0.0, y[1], 1E-4);
-        out = out && compare(0.0, y[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix forward identity");
-        }
+        out = out && test(0.0, y[0], 1E-4, "Failed matrix forward identity");
+        out = out && test(0.0, y[1], 1E-4, "Failed matrix forward identity");
+        out = out && test(0.0, y[2], 1E-4, "Failed matrix forward identity");
 
         mml::matrix<double, 3, 3> j = system.jacobian(y, 0.1);
-        out = out && compare(1.0, j.get(0, 0), 1E-4);
-        out = out && compare(2.0, j.get(0, 1), 1E-4);
-        out = out && compare(-2.0, j.get(0, 2), 1E-4);
-        out = out && compare(2.0, j.get(1, 0), 1E-4);
-        out = out && compare(1.0, j.get(1, 1), 1E-4);
-        out = out && compare(-5.0, j.get(1, 2), 1E-4);
-        out = out && compare(1.0, j.get(2, 0), 1E-4);
-        out = out && compare(-4.0, j.get(2, 1), 1E-4);
-        out = out && compare(1.0, j.get(2, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix forward jacobian");
-        }
+        out = out && test(1.0, j.get(0, 0), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(2.0, j.get(0, 1), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(-2.0, j.get(0, 2), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(2.0, j.get(1, 0), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(1.0, j.get(1, 1), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(-5.0, j.get(1, 2), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(1.0, j.get(2, 0), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(-4.0, j.get(2, 1), 1E-4, "Failed matrix forward jacobian");
+        out = out && test(1.0, j.get(2, 2), 1E-4, "Failed matrix forward jacobian");
 
         // Test solving the root of system of equations
         mml::vector<double, 3> x0(10.0);
@@ -190,14 +157,10 @@ bool test_system()
 
         // Test zero
         double convergence = system.zero(x0, x1);
-        out = out && compare(0.0, convergence, 1E-7);
-        out = out && compare(-1.0, x1[0], 1E-4);
-        out = out && compare(-4.0, x1[1], 1E-4);
-        out = out && compare(3.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed matrix forward zero");
-        }
+        out = out && test(0.0, convergence, 1E-7, "Failed matrix forward zero");
+        out = out && test(-1.0, x1[0], 1E-4, "Failed matrix forward zero");
+        out = out && test(-4.0, x1[1], 1E-4, "Failed matrix forward zero");
+        out = out && test(3.0, x1[2], 1E-4, "Failed matrix forward zero");
     }
 
     return out;

@@ -18,7 +18,6 @@ limitations under the License.
 #include <mml/nnet.h>
 #include <mml/test.h>
 #include <mml/vec.h>
-#include <stdexcept>
 
 bool test_neural_net_fixed()
 {
@@ -46,105 +45,65 @@ bool test_neural_net_fixed()
         output = net.calculate_sigmoid();
 
         // Test first layer of net
-        out = out && compare(1.0, net.get_output(0, 0), 1E-4);
-        out = out && compare(1.0, net.get_output(0, 1), 1E-4);
-        out = out && compare(1.0, net.get_output(0, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate layer 1");
-        }
+        out = out && test(1.0, net.get_output(0, 0), 1E-4, "Failed net calculate layer 1");
+        out = out && test(1.0, net.get_output(0, 1), 1E-4, "Failed net calculate layer 1");
+        out = out && test(1.0, net.get_output(0, 2), 1E-4, "Failed net calculate layer 1");
 
         // Test second layer of net
-        out = out && compare(0.9525, net.get_output(1, 0), 1E-4);
-        out = out && compare(0.9525, net.get_output(1, 1), 1E-4);
-        out = out && compare(0.9525, net.get_output(1, 2), 1E-4);
-        out = out && compare(0.9525, net.get_output(1, 3), 1E-4);
-        out = out && compare(0.9525, net.get_output(1, 4), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate layer 2");
-        }
+        out = out && test(0.9525, net.get_output(1, 0), 1E-4, "Failed net calculate layer 2");
+        out = out && test(0.9525, net.get_output(1, 1), 1E-4, "Failed net calculate layer 2");
+        out = out && test(0.9525, net.get_output(1, 2), 1E-4, "Failed net calculate layer 2");
+        out = out && test(0.9525, net.get_output(1, 3), 1E-4, "Failed net calculate layer 2");
+        out = out && test(0.9525, net.get_output(1, 4), 1E-4, "Failed net calculate layer 2");
 
         // Test third layer of net
-        out = out && compare(0.9915, net.get_output(2, 0), 1E-4);
-        out = out && compare(0.9915, net.get_output(2, 1), 1E-4);
-        out = out && compare(0.9915, net.get_output(2, 2), 1E-4);
-        out = out && compare(0.9915, net.get_output(2, 3), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate layer 3");
-        }
+        out = out && test(0.9915, net.get_output(2, 0), 1E-4, "Failed net calculate layer 3");
+        out = out && test(0.9915, net.get_output(2, 1), 1E-4, "Failed net calculate layer 3");
+        out = out && test(0.9915, net.get_output(2, 2), 1E-4, "Failed net calculate layer 3");
+        out = out && test(0.9915, net.get_output(2, 3), 1E-4, "Failed net calculate layer 3");
 
         // Test last layer of net
-        out = out && compare(0.9814, net.get_output(3, 0), 1E-4);
-        out = out && compare(0.9814, net.get_output(3, 1), 1E-4);
-        out = out && compare(0.9814, net.get_output(3, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate layer 4");
-        }
+        out = out && test(0.9814, net.get_output(3, 0), 1E-4, "Failed net calculate layer 4");
+        out = out && test(0.9814, net.get_output(3, 1), 1E-4, "Failed net calculate layer 4");
+        out = out && test(0.9814, net.get_output(3, 2), 1E-4, "Failed net calculate layer 4");
 
-        out = out && compare(0.9814, output[0], 1E-4);
-        out = out && compare(0.9814, output[1], 1E-4);
-        out = out && compare(0.9814, output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate output");
-        }
+        out = out && test(0.9814, output[0], 1E-4, "Failed net calculate output");
+        out = out && test(0.9814, output[1], 1E-4, "Failed net calculate output");
+        out = out && test(0.9814, output[2], 1E-4, "Failed net calculate output");
 
         // Check operator=
         net2 = net;
         output = net2.calculate_sigmoid();
-        out = out && compare(0.9814, output[0], 1E-4);
-        out = out && compare(0.9814, output[1], 1E-4);
-        out = out && compare(0.9814, output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate output copy");
-        }
+        out = out && test(0.9814, output[0], 1E-4, "Failed net calculate output copy");
+        out = out && test(0.9814, output[1], 1E-4, "Failed net calculate output copy");
+        out = out && test(0.9814, output[2], 1E-4, "Failed net calculate output copy");
 
         // Check neural nets are compatible
         const bool compatible = mml::nnet<double, 3, 3>::compatible(net, net2);
-        out = out && compatible;
-        if (!out)
-        {
-            throw std::runtime_error("Failed net compatible");
-        }
+        out = out && test(true, compatible, "Failed net compatible");
 
         // Breed the net with itself, output is same since weights are zero
         net2 = mml::nnet<double, 3, 3>::breed(net, net2);
         output = net2.calculate_sigmoid();
-        out = out && compare(0.9814, output[0], 1E-4);
-        out = out && compare(0.9814, output[1], 1E-4);
-        out = out && compare(0.9814, output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate output breed");
-        }
+        out = out && test(0.9814, output[0], 1E-4, "Failed net calculate output breed");
+        out = out && test(0.9814, output[1], 1E-4, "Failed net calculate output breed");
+        out = out && test(0.9814, output[2], 1E-4, "Failed net calculate output breed");
 
         // Try to randomize the net
         cached_output = output;
         net2.randomize(rng);
         output = net2.calculate_sigmoid();
-        out = out && !compare(cached_output[0], output[0], 1E-4);
-        out = out && !compare(cached_output[1], output[1], 1E-4);
-        out = out && !compare(cached_output[2], output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate output random");
-        }
+        out = out && not_test(cached_output[0], output[0], 1E-4, "Failed net calculate output random");
+        out = out && not_test(cached_output[1], output[1], 1E-4, "Failed net calculate output random");
+        out = out && not_test(cached_output[2], output[2], 1E-4, "Failed net calculate output random");
 
         // Test inbreeding
         cached_output = output;
         net2 = mml::nnet<double, 3, 3>::breed(net2, net2);
         output = net2.calculate_sigmoid();
-        out = out && compare(cached_output[0], output[0], 1E-4);
-        out = out && compare(cached_output[1], output[1], 1E-4);
-        out = out && compare(cached_output[2], output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate inbreeding");
-        }
+        out = out && test(cached_output[0], output[0], 1E-4, "Failed net calculate inbreeding");
+        out = out && test(cached_output[1], output[1], 1E-4, "Failed net calculate inbreeding");
+        out = out && test(cached_output[2], output[2], 1E-4, "Failed net calculate inbreeding");
 
         // Mutate the neural net, ensure RNG doesn't screw up our tests
         cached_output = output;
@@ -157,31 +116,19 @@ bool test_neural_net_fixed()
         net2.mutate(rng);
         net2.mutate(rng);
         output = net2.calculate_sigmoid();
-        out = out && !compare(cached_output[0], output[0], 1E-4);
-        out = out || !compare(cached_output[1], output[1], 1E-4);
-        out = out || !compare(cached_output[2], output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net calculate output random breed mutate");
-        }
+        out = out && not_test(cached_output[0], output[0], 1E-4, "Failed net calculate output random breed mutate");
+        out = out || not_test(cached_output[1], output[1], 1E-4, "Failed net calculate output random breed mutate");
+        out = out || not_test(cached_output[2], output[2], 1E-4, "Failed net calculate output random breed mutate");
 
         // Test input is unchanged
         in = net2.get_input();
-        out = out && compare(3.0, in[0], 1E-4);
-        out = out && compare(4.0, in[1], 1E-4);
-        out = out && compare(5.0, in[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net input unchanged");
-        }
+        out = out && test(3.0, in[0], 1E-4, "Failed net input unchanged");
+        out = out && test(4.0, in[1], 1E-4, "Failed net input unchanged");
+        out = out && test(5.0, in[2], 1E-4, "Failed net input unchanged");
 
         // Test serialize neural net
         std::vector<double> data = net2.serialize();
-        out = out && compare(78, data.size());
-        if (!out)
-        {
-            throw std::runtime_error("Failed net serialize");
-        }
+        out = out && test(78, data.size(), "Failed net serialize");
 
         // Cache old result
         cached_output = output;
@@ -192,13 +139,9 @@ bool test_neural_net_fixed()
         net3.set_input(in);
         output = net3.calculate_sigmoid();
 
-        out = out && compare(cached_output[0], output[0], 1E-4);
-        out = out && compare(cached_output[1], output[1], 1E-4);
-        out = out && compare(cached_output[2], output[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed net deserialize calculate");
-        }
+        out = out && test(cached_output[0], output[0], 1E-4, "Failed net deserialize calculate");
+        out = out && test(cached_output[1], output[1], 1E-4, "Failed net deserialize calculate");
+        out = out && test(cached_output[2], output[2], 1E-4, "Failed net deserialize calculate");
     }
 
     // 1X1 Problems linear model
@@ -217,7 +160,7 @@ bool test_neural_net_fixed()
         mml::vector<double, 1> sp;
         sp[0] = 1.0;
 
-        // iteration N
+        // Iteration N
         for (size_t i = 0; i < 10; i++)
         {
             net.backprop_identity(sp, 0.25);
@@ -225,11 +168,7 @@ bool test_neural_net_fixed()
         }
 
         // Did we converge?
-        out = out && compare(1.0, output[0], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 1x1 training y=1");
-        }
+        out = out && test(1.0, output[0], 1E-4, "Failed neural net 1x1 training y=1");
     }
     {
         // Test nnet operations
@@ -266,17 +205,13 @@ bool test_neural_net_fixed()
             net.set_input(in);
             output = net.calculate_identity();
 
-            // Compare error rates
+            // test error rates
             const double sp = x;
             total_error += (output - sp).square_magnitude();
         }
 
         // Did we pass the fit test?
-        out = out && compare(0.0, total_error, 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 1x1 training y=x");
-        }
+        out = out && test(0.0, total_error, 1E-4, "Failed neural net 1x1 training y=x");
     }
     // 1X1 Problems
     {
@@ -325,28 +260,20 @@ bool test_neural_net_fixed()
             net.set_input(in);
             output = net.calculate_relu();
 
-            // Compare error rates
+            // test error rates
             const double sp = (std::abs(x) >= 1E-3) ? std::sin(x) / x : 1.0;
             total_error += (output - sp).square_magnitude();
         }
 
         // This is still pretty far away from perfect, but good enough for a test
-        out = out && compare(359.33, total_error, 1E-3);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 1x1 training sin(x) / x");
-        }
+        out = out && test(359.33, total_error, 1E-3, "Failed neural net 1x1 training sin(x) / x");
 
         // Test deserialize and serialize
         mml::nnet<double, 1, 1> net2;
 
         // Test serialize neural net
         std::vector<double> data = net.serialize();
-        out = out && compare(110, data.size());
-        if (!out)
-        {
-            throw std::runtime_error("Failed net 1X1 serialize");
-        }
+        out = out && test(110, data.size(), "Failed net 1X1 serialize");
 
         // Test deserialize neural net
         net2.deserialize(data);
@@ -363,17 +290,13 @@ bool test_neural_net_fixed()
             net2.set_input(in);
             output = net2.calculate_relu();
 
-            // Compare error rates
+            // test error rates
             const double sp = (std::abs(x) >= 1E-3) ? std::sin(x) / x : 1.0;
             total_error += (output - sp).square_magnitude();
         }
 
         // This is still pretty far away from perfect, but good enough for a test
-        out = out && compare(359.33, total_error, 1E-3);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 1x1 training sin(x) / x deserialize");
-        }
+        out = out && test(359.33, total_error, 1E-3, "Failed neural net 1x1 training sin(x) / x deserialize");
     }
 
     // 2X2 Problems linear model
@@ -394,7 +317,7 @@ bool test_neural_net_fixed()
         sp[0] = 5.0;
         sp[1] = 1.0;
 
-        // iteration N
+        // Iteration N
         for (size_t i = 0; i < 45; i++)
         {
             net.backprop_identity(sp, 0.01);
@@ -402,12 +325,8 @@ bool test_neural_net_fixed()
         }
 
         // Did we converge?
-        out = out && compare(5.0, output[0], 1E-4);
-        out = out && compare(1.0, output[1], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 1x1 training y=1");
-        }
+        out = out && test(5.0, output[0], 1E-4, "Failed neural net 1x1 training y=1");
+        out = out && test(1.0, output[1], 1E-4, "Failed neural net 1x1 training y=1");
     }
     // 2X1 Problems linear model
     {
@@ -426,7 +345,7 @@ bool test_neural_net_fixed()
         mml::vector<double, 1> sp;
         sp[0] = 10.0;
 
-        // // iteration N
+        // Iteration N
         for (size_t i = 0; i < 35; i++)
         {
             net.backprop_identity(sp, 0.01);
@@ -434,11 +353,7 @@ bool test_neural_net_fixed()
         }
 
         // Did we converge?
-        out = out && compare(10.0, output[0], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 2x1 training y=1");
-        }
+        out = out && test(10.0, output[0], 1E-4, "Failed neural net 2x1 training y=1");
     }
     {
         // Test nnet operations x+y=z
@@ -489,18 +404,14 @@ bool test_neural_net_fixed()
                 net.set_input(in);
                 output = net.calculate_identity();
 
-                // Compare error rates
+                // test error rates
                 const double sp = x + y;
                 total_error += (output - sp).square_magnitude();
             }
         }
 
         // Did we pass the fit test?
-        out = out && compare(0.0, total_error, 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed neural net 1x1 training z=x+y");
-        }
+        out = out && test(0.0, total_error, 1E-4, "Failed neural net 1x1 training z=x+y");
     }
 
     // return result

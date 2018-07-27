@@ -49,10 +49,9 @@ inline matrix<T, R1, C2> multiply(const matrix<T, R1, C1> &m1, const matrix<T, R
 template <typename T, size_t R, size_t C>
 inline vector<T, R> multiply(const matrix<T, R, C> &m1, const vector<T, C> &m2)
 {
-    // return vector of R rows
     vector<T, R> out;
 
-    // multiply vector by matrix
+    // Multiply column vector by matrix
     for (size_t i = 0; i < R; i++)
     {
         for (size_t j = 0; j < C; j++)
@@ -61,8 +60,9 @@ inline vector<T, R> multiply(const matrix<T, R, C> &m1, const vector<T, C> &m2)
         }
     }
 
+    // Return vector of R rows
     return out;
 }
-}
+} // namespace mml
 
 #endif

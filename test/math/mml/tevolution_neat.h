@@ -19,7 +19,6 @@ limitations under the License.
 #include <mml/nneat.h>
 #include <mml/test.h>
 #include <mml/vec.h>
-#include <stdexcept>
 
 bool test_evolve_neat()
 {
@@ -35,7 +34,6 @@ bool test_evolve_neat()
 
     // Create fitness function
     const std::function<double(const mml::nneat<double, 3, 3> &)> &fitness = [&in](const mml::nneat<double, 3, 3> &net) {
-
         // Set input to network
         net.set_input(in);
 
@@ -80,7 +78,7 @@ bool test_evolve_neat()
         evolve.evolve(fitness);
     }
 
-    mml::nneat<double, 3, 3> test = evolve.top_net();
+    mml::nneat<double, 3, 3> test_nn = evolve.top_net();
 
     // Evaluate all possibilities
     count = 0;
@@ -101,17 +99,13 @@ bool test_evolve_neat()
         count++;
 
         // Evolve loop
-        if (fitness(test) > 0.5)
+        if (fitness(test_nn) > 0.5)
         {
             passed++;
         }
     }
 
-    out = out && compare(8, passed);
-    if (!out)
-    {
-        throw std::runtime_error("Failed NEAT evolution");
-    }
+    out = out && test(8, passed, "Failed NEAT evolution");
 
     return out;
 }

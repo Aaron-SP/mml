@@ -29,7 +29,7 @@ install:
 uninstall:
 	rm -rI $(MML_PATH)
 tests:
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) -Itest $(PARAMS) $(TEST) -o bin/test 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) -Itest $(PARAMS) $(TEST) -o bin/test
 
 # clean targets
 clean: clean_junk clean_tests

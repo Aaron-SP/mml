@@ -74,31 +74,9 @@ class net_rng
     {
         return _mut_dist(_rgen);
     }
-    inline std::vector<T> mutation(size_t size)
-    {
-        // Create a vector of random numbers
-        std::vector<T> out(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            out[i] = this->mutation();
-        }
-
-        return out;
-    }
     inline T random()
     {
         return _ran_dist(_rgen);
-    }
-    inline std::vector<T> random(size_t size)
-    {
-        // Create a vector of random numbers
-        std::vector<T> out(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            out[i] = this->random();
-        }
-
-        return out;
     }
     inline unsigned random_int()
     {
@@ -109,5 +87,5 @@ class net_rng
         _rgen.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     }
 };
-}
+} // namespace mml
 #endif

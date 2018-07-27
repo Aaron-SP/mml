@@ -15,18 +15,66 @@ limitations under the License.
 #ifndef __TESTUTIL__
 #define __TESTUTIL__
 
+#include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
-bool compare(double one, double two, double threshold)
+template <typename T>
+struct identity
 {
-    // Compare double
-    return std::abs(one - two) <= threshold;
-}
+    typedef T type;
+};
+template <typename T>
+using identity_t = typename identity<T>::type;
 
-bool compare(int one, int two)
+template <typename T>
+bool compare(const T one, const identity_t<T> two)
 {
-    // Compare integers
     return one == two;
 }
-
+template <typename T>
+bool compare(const T one, const identity_t<T> two, const identity_t<T> threshold)
+{
+    return std::abs(one - two) <= threshold;
+}
+template <typename T>
+bool test(const T one, const identity_t<T> two, const char *fail)
+{
+    const bool out = compare<T>(one, two);
+    if (!out)
+    {
+        throw std::runtime_error(fail);
+    }
+    return out;
+}
+template <typename T>
+bool test(const T one, const identity_t<T> two, const identity_t<T> tol, const char *fail)
+{
+    const bool out = compare(one, two, tol);
+    if (!out)
+    {
+        throw std::runtime_error(fail);
+    }
+    return out;
+}
+template <typename T>
+bool not_test(const T one, const identity_t<T> two, const char *fail)
+{
+    const bool out = compare(one, two);
+    if (out)
+    {
+        throw std::runtime_error(fail);
+    }
+    return !out;
+}
+template <typename T>
+bool not_test(const T one, const identity_t<T> two, const identity_t<T> tol, const char *fail)
+{
+    const bool out = compare(one, two, tol);
+    if (out)
+    {
+        throw std::runtime_error(fail);
+    }
+    return !out;
+}
 #endif

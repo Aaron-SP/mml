@@ -35,21 +35,21 @@ class backward
         // Initialize backward point
         vector<T, N> x0 = x1;
 
-        // calculate partial derivatives for each x component
+        // Calculate partial derivatives for each x component
         vector<T, N> out;
         for (size_t i = 0; i < N; i++)
         {
-            // step backward by dx
+            // Step backward by dx
             x0[i] -= dx;
 
-            // evaluate derivative
+            // Evaluate derivative
             out[i] = (f(x1) - f(x0)) / dx;
 
-            // step forward by dx
+            // Step forward by dx
             x0[i] += dx;
         }
 
-        // return the gradient of f
+        // Return the gradient of f
         return out;
     }
     inline static matrix<T, N, N> hessian(const equation<T, N, backward> f, const vector<T, N> &x1, const T dx)
@@ -60,24 +60,24 @@ class backward
         // Initialize backward point
         vector<T, N> x0 = x1;
 
-        // calculate partial derivatives for each x component
+        // Calculate partial derivatives for each x component
         for (size_t i = 0; i < N; i++)
         {
-            // step backward by dx
+            // Step backward by dx
             x0[i] -= dx;
 
-            // evaluate derivative
+            // Evaluate derivative
             vector<T, N> d2f_dx2 = (backward<T, N>::gradient(f, x1, dx) - backward<T, N>::gradient(f, x0, dx)) / dx;
             for (size_t j = 0; j < N; j++)
             {
                 hes.get(i, j) = d2f_dx2[j];
             }
 
-            // step forward by dx
+            // Step forward by dx
             x0[i] += dx;
         }
 
-        // return hessian matrix of equation
+        // Return hessian matrix of equation
         return hes;
     }
     inline static matrix<T, N, N> jacobian(const equation<T, N, backward> f[N], const vector<T, N> &x1, const T dx)
@@ -98,7 +98,7 @@ class backward
             }
         }
 
-        // return jacobian matrix of system
+        // Return jacobian matrix of system
         return jac;
     }
 };
@@ -115,27 +115,27 @@ class center
         vector<T, N> x0 = x1;
         vector<T, N> x2 = x1;
 
-        // calculate partial derivatives for each x component
+        // Calculate partial derivatives for each x component
         vector<T, N> out;
         for (size_t i = 0; i < N; i++)
         {
-            // step backward by half dx
+            // Step backward by half dx
             x0[i] -= half_dx;
 
-            // step forward by half dx
+            // Step forward by half dx
             x2[i] += half_dx;
 
-            // evaluate derivative
+            // Evaluate derivative
             out[i] = (f(x2) - f(x0)) / dx;
 
-            // step forward by half dx
+            // Step forward by half dx
             x0[i] += half_dx;
 
-            // step backward by half dx
+            // Step backward by half dx
             x2[i] -= half_dx;
         }
 
-        // return the gradient of f
+        // Return the gradient of f
         return out;
     }
     inline static matrix<T, N, N> hessian(const equation<T, N, center> f, const vector<T, N> &x1, const T dx)
@@ -148,26 +148,26 @@ class center
         vector<T, N> x0 = x1;
         vector<T, N> x2 = x1;
 
-        // calculate partial derivatives for each x component
+        // Calculate partial derivatives for each x component
         for (size_t i = 0; i < N; i++)
         {
-            // step backward by half dx
+            // Step backward by half dx
             x0[i] -= half_dx;
 
-            // step forward by half dx
+            // Step forward by half dx
             x2[i] += half_dx;
 
-            // evaluate derivative
+            // Evaluate derivative
             vector<T, N> d2f_dx2 = (center<T, N>::gradient(f, x1, dx) - center<T, N>::gradient(f, x0, dx)) / half_dx;
             for (size_t j = 0; j < N; j++)
             {
                 hes.get(i, j) = d2f_dx2[j];
             }
 
-            // step forward by half dx
+            // Step forward by half dx
             x0[i] += half_dx;
 
-            // step backward by half dx
+            // Step backward by half dx
             x2[i] -= half_dx;
         }
 
@@ -192,7 +192,7 @@ class center
             }
         }
 
-        // return jacobian matrix of system
+        // Return jacobian matrix of system
         return jac;
     }
 };
@@ -207,21 +207,21 @@ class forward
         // Initialize forward point
         vector<T, N> x2 = x1;
 
-        // calculate partial derivatives for each x component
+        // Calculate partial derivatives for each x component
         vector<T, N> out;
         for (size_t i = 0; i < N; i++)
         {
-            // step forward by dx
+            // Step forward by dx
             x2[i] += dx;
 
-            // evaluate derivative
+            // Evaluate derivative
             out[i] = (f(x2) - f(x1)) / dx;
 
-            // step backward by dx
+            // Step backward by dx
             x2[i] -= dx;
         }
 
-        // return the gradient of f
+        // Return the gradient of f
         return out;
     }
     inline static matrix<T, N, N> hessian(const equation<T, N, forward> f, const vector<T, N> &x1, const T dx)
@@ -232,20 +232,20 @@ class forward
         // Initialize forward point
         vector<T, N> x2 = x1;
 
-        // calculate partial derivatives for each x component
+        // Calculate partial derivatives for each x component
         for (size_t i = 0; i < N; i++)
         {
-            // step forward by dx
+            // Step forward by dx
             x2[i] += dx;
 
-            // evaluate derivative
+            // Evaluate derivative
             vector<T, N> d2f_dx2 = (forward<T, N>::gradient(f, x2, dx) - forward<T, N>::gradient(f, x1, dx)) / dx;
             for (size_t j = 0; j < N; j++)
             {
                 hes.get(i, j) = d2f_dx2[j];
             }
 
-            // step backward by dx
+            // Step backward by dx
             x2[i] -= dx;
         }
 
@@ -270,10 +270,10 @@ class forward
             }
         }
 
-        // return jacobian matrix of system
+        // Return jacobian matrix of system
         return jac;
     }
 };
-}
+} // namespace mml
 
 #endif

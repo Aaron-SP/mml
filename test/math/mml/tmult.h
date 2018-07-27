@@ -19,7 +19,6 @@ limitations under the License.
 #include <mml/mult.h>
 #include <mml/test.h>
 #include <mml/vec.h>
-#include <stdexcept>
 
 bool test_matrix_multiply()
 {
@@ -47,14 +46,10 @@ bool test_matrix_multiply()
 
     // multiply matrices
     mml::matrix<double, 2, 2> m3 = mml::multiply<double, 2, 3, 3, 2>(m1, m2);
-    out = out && compare(58.0, m3.get(0, 0), 1E-4);
-    out = out && compare(64.0, m3.get(0, 1), 1E-4);
-    out = out && compare(139.0, m3.get(1, 0), 1E-4);
-    out = out && compare(154.0, m3.get(1, 1), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed matrix multiply");
-    }
+    out = out && test(58.0, m3.get(0, 0), 1E-4, "Failed matrix multiply");
+    out = out && test(64.0, m3.get(0, 1), 1E-4, "Failed matrix multiply");
+    out = out && test(139.0, m3.get(1, 0), 1E-4, "Failed matrix multiply");
+    out = out && test(154.0, m3.get(1, 1), 1E-4, "Failed matrix multiply");
 
     // set m1 for vector-matrix multiplication test
     m1.get(0, 0) = 1.0;
@@ -72,12 +67,8 @@ bool test_matrix_multiply()
 
     // Test vector-matrix multiplication
     mml::vector<double, 2> v2 = mml::multiply<double, 2, 3>(m1, v1);
-    out = out && compare(1.0, v2[0], 1E-4);
-    out = out && compare(-3.0, v2[1], 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed vector-matrix multiply");
-    }
+    out = out && test(1.0, v2[0], 1E-4, "Failed vector-matrix multiply");
+    out = out && test(-3.0, v2[1], 1E-4, "Failed vector-matrix multiply");
 
     return out;
 }

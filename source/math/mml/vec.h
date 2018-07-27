@@ -16,20 +16,21 @@ limitations under the License.
 #define __VECTOR__
 
 #include <cmath>
+#include <cstring>
 
 namespace mml
 {
 
+// Memory layout is column vector!
 template <typename T, size_t N>
 class vector
 {
   private:
-    T _vec[N]; // column vector
+    T _vec[N];
 
   public:
     vector()
     {
-        // zero all fields
         zero();
     }
     vector(const T value[N])
@@ -46,15 +47,13 @@ class vector
             _vec[i] = value;
         }
     }
-    inline T operator[](const size_t n) const
+    inline T operator[](const size_t index) const
     {
-        // value getter
-        return _vec[n];
+        return _vec[index];
     }
-    inline T &operator[](const size_t n)
+    inline T &operator[](const size_t index)
     {
-        // value setter
-        return _vec[n];
+        return _vec[index];
     }
     inline vector<T, N> operator+(const vector<T, N> &vec) const
     {
@@ -62,7 +61,7 @@ class vector
 
         for (size_t i = 0; i < N; i++)
         {
-            out[i] = this->operator[](i) + vec[i];
+            out[i] = _vec[i] + vec[i];
         }
 
         return out;
@@ -73,7 +72,7 @@ class vector
 
         for (size_t i = 0; i < N; i++)
         {
-            out[i] = this->operator[](i) - vec[i];
+            out[i] = _vec[i] - vec[i];
         }
 
         return out;
@@ -84,7 +83,7 @@ class vector
 
         for (size_t i = 0; i < N; i++)
         {
-            out[i] = this->operator[](i) * vec[i];
+            out[i] = _vec[i] * vec[i];
         }
 
         return out;
@@ -95,7 +94,7 @@ class vector
 
         for (size_t i = 0; i < N; i++)
         {
-            out[i] = this->operator[](i) / vec[i];
+            out[i] = _vec[i] / vec[i];
         }
 
         return out;
@@ -104,28 +103,28 @@ class vector
     {
         for (size_t i = 0; i < N; i++)
         {
-            this->operator[](i) += vec[i];
+            _vec[i] += vec[i];
         }
     }
     inline void operator-=(const vector<T, N> &vec)
     {
         for (size_t i = 0; i < N; i++)
         {
-            this->operator[](i) -= vec[i];
+            _vec[i] -= vec[i];
         }
     }
     inline void operator*=(const vector<T, N> &vec)
     {
         for (size_t i = 0; i < N; i++)
         {
-            this->operator[](i) *= vec[i];
+            _vec[i] *= vec[i];
         }
     }
     inline void operator/=(const vector<T, N> &vec)
     {
         for (size_t i = 0; i < N; i++)
         {
-            this->operator[](i) /= vec[i];
+            _vec[i] /= vec[i];
         }
     }
     inline T square_magnitude() const
@@ -138,17 +137,15 @@ class vector
             out += _vec[i] * _vec[i];
         }
 
-        // return the square magnitude
+        // Return the square magnitude
         return out;
     }
     inline void zero()
     {
-        for (size_t i = 0; i < N; i++)
-        {
-            _vec[i] = 0.0;
-        }
+        constexpr size_t bytes = N * sizeof(T);
+        std::memset(&_vec[0], 0, bytes);
     }
 };
-}
+} // namespace mml
 
 #endif

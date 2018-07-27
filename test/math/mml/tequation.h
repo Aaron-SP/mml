@@ -19,7 +19,6 @@ limitations under the License.
 #include <mml/numeric.h>
 #include <mml/test.h>
 #include <mml/vec.h>
-#include <stdexcept>
 
 double g1(const mml::vector<double, 3> &x)
 {
@@ -42,52 +41,40 @@ bool test_equation()
         // Test min_fast
         double convergence = eqs[0].min_fast(x0, x1, 20, 1E-7);
 
-        // evaluate g1 at x1
+        // Evaluate g1 at x1
         double y1 = g1(x1);
 
         // Test if found min at (0.0, 0.0, 0.0) at starting point (10.0, 10.0, 10.0)
-        out = out && compare(0.0, convergence, 1E-4);
-        out = out && compare(15.0, y1, 1E-4);
-        out = out && compare(0.0, x1[0], 1E-4);
-        out = out && compare(0.0, x1[1], 1E-4);
-        out = out && compare(0.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation backward min_fast convex");
-        }
+        out = out && test(0.0, convergence, 1E-4, "Failed equation backward min_fast convex");
+        out = out && test(15.0, y1, 1E-4, "Failed equation backward min_fast convex");
+        out = out && test(0.0, x1[0], 1E-4, "Failed equation backward min_fast convex");
+        out = out && test(0.0, x1[1], 1E-4, "Failed equation backward min_fast convex");
+        out = out && test(0.0, x1[2], 1E-4, "Failed equation backward min_fast convex");
 
         // Test min
         convergence = eqs[0].min(x0, x1, 20, 1E-4);
 
-        // evaluate g1 at x1
+        // Evaluate g1 at x1
         y1 = g1(x1);
 
         // Test if found min at (0.0, 0.0, 0.0) at starting point (10.0, 10.0, 10.0)
-        out = out && compare(0.0, convergence, 1E-4);
-        out = out && compare(15.0, y1, 1E-4);
-        out = out && compare(0.0, x1[0], 1E-4);
-        out = out && compare(0.0, x1[1], 1E-4);
-        out = out && compare(0.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation backward min");
-        }
+        out = out && test(0.0, convergence, 1E-4, "Failed equation backward min");
+        out = out && test(15.0, y1, 1E-4, "Failed equation backward min");
+        out = out && test(0.0, x1[0], 1E-4, "Failed equation backward min");
+        out = out && test(0.0, x1[1], 1E-4, "Failed equation backward min");
+        out = out && test(0.0, x1[2], 1E-4, "Failed equation backward min");
 
         // Test hessian calculation
         mml::matrix<double, 3, 3> h = mml::backward<double, 3>::hessian(eqs[0], x0, 1E-3);
-        out = out && compare(2.0, h.get(0, 0), 1E-4);
-        out = out && compare(0.0, h.get(0, 1), 1E-4);
-        out = out && compare(0.0, h.get(0, 2), 1E-4);
-        out = out && compare(0.0, h.get(1, 0), 1E-4);
-        out = out && compare(4.0, h.get(1, 1), 1E-4);
-        out = out && compare(0.0, h.get(1, 2), 1E-4);
-        out = out && compare(0.0, h.get(2, 0), 1E-4);
-        out = out && compare(0.0, h.get(2, 1), 1E-4);
-        out = out && compare(4.0, h.get(2, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation backward hessian");
-        }
+        out = out && test(2.0, h.get(0, 0), 1E-4, "Failed equation backward hessian");
+        out = out && test(0.0, h.get(0, 1), 1E-4, "Failed equation backward hessian");
+        out = out && test(0.0, h.get(0, 2), 1E-4, "Failed equation backward hessian");
+        out = out && test(0.0, h.get(1, 0), 1E-4, "Failed equation backward hessian");
+        out = out && test(4.0, h.get(1, 1), 1E-4, "Failed equation backward hessian");
+        out = out && test(0.0, h.get(1, 2), 1E-4, "Failed equation backward hessian");
+        out = out && test(0.0, h.get(2, 0), 1E-4, "Failed equation backward hessian");
+        out = out && test(0.0, h.get(2, 1), 1E-4, "Failed equation backward hessian");
+        out = out && test(4.0, h.get(2, 2), 1E-4, "Failed equation backward hessian");
     }
 
     // Center Hessian
@@ -101,52 +88,40 @@ bool test_equation()
         // Test min_fast
         double convergence = eqs[0].min_fast(x0, x1, 20, 1E-7);
 
-        // evaluate g1 at x1
+        // Evaluate g1 at x1
         double y1 = g1(x1);
 
         // Test if found min at (0.0, 0.0, 0.0) at starting point (10.0, 10.0, 10.0)
-        out = out && compare(0.0, convergence, 1E-4);
-        out = out && compare(15.0, y1, 1E-4);
-        out = out && compare(0.0, x1[0], 1E-4);
-        out = out && compare(0.0, x1[1], 1E-4);
-        out = out && compare(0.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation center min_fast convex");
-        }
+        out = out && test(0.0, convergence, 1E-4, "Failed equation center min_fast convex");
+        out = out && test(15.0, y1, 1E-4, "Failed equation center min_fast convex");
+        out = out && test(0.0, x1[0], 1E-4, "Failed equation center min_fast convex");
+        out = out && test(0.0, x1[1], 1E-4, "Failed equation center min_fast convex");
+        out = out && test(0.0, x1[2], 1E-4, "Failed equation center min_fast convex");
 
         // Test min
         convergence = eqs[0].min(x0, x1, 20, 1E-4);
 
-        // evaluate g1 at x1
+        // Evaluate g1 at x1
         y1 = g1(x1);
 
         // Test if found min at (0.0, 0.0, 0.0) at starting point (10.0, 10.0, 10.0)
-        out = out && compare(0.0, convergence, 1E-4);
-        out = out && compare(15.0, y1, 1E-4);
-        out = out && compare(0.0, x1[0], 1E-4);
-        out = out && compare(0.0, x1[1], 1E-4);
-        out = out && compare(0.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation center min");
-        }
+        out = out && test(0.0, convergence, 1E-4, "Failed equation center min");
+        out = out && test(15.0, y1, 1E-4, "Failed equation center min");
+        out = out && test(0.0, x1[0], 1E-4, "Failed equation center min");
+        out = out && test(0.0, x1[1], 1E-4, "Failed equation center min");
+        out = out && test(0.0, x1[2], 1E-4, "Failed equation center min");
 
         // Test hessian calculation
         mml::matrix<double, 3, 3> h = mml::center<double, 3>::hessian(eqs[0], x0, 1E-3);
-        out = out && compare(2.0, h.get(0, 0), 1E-4);
-        out = out && compare(0.0, h.get(0, 1), 1E-4);
-        out = out && compare(0.0, h.get(0, 2), 1E-4);
-        out = out && compare(0.0, h.get(1, 0), 1E-4);
-        out = out && compare(4.0, h.get(1, 1), 1E-4);
-        out = out && compare(0.0, h.get(1, 2), 1E-4);
-        out = out && compare(0.0, h.get(2, 0), 1E-4);
-        out = out && compare(0.0, h.get(2, 1), 1E-4);
-        out = out && compare(4.0, h.get(2, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation center hessian");
-        }
+        out = out && test(2.0, h.get(0, 0), 1E-4, "Failed equation center hessian");
+        out = out && test(0.0, h.get(0, 1), 1E-4, "Failed equation center hessian");
+        out = out && test(0.0, h.get(0, 2), 1E-4, "Failed equation center hessian");
+        out = out && test(0.0, h.get(1, 0), 1E-4, "Failed equation center hessian");
+        out = out && test(4.0, h.get(1, 1), 1E-4, "Failed equation center hessian");
+        out = out && test(0.0, h.get(1, 2), 1E-4, "Failed equation center hessian");
+        out = out && test(0.0, h.get(2, 0), 1E-4, "Failed equation center hessian");
+        out = out && test(0.0, h.get(2, 1), 1E-4, "Failed equation center hessian");
+        out = out && test(4.0, h.get(2, 2), 1E-4, "Failed equation center hessian");
     }
 
     // Forward Hessian
@@ -161,19 +136,15 @@ bool test_equation()
         // Test min_fast
         double convergence = eqs[0].min_fast(x0, x1, 20, 1E-7);
 
-        // evaluate g1 at x1
+        // Evaluate g1 at x1
         double y1 = g1(x1);
 
         // Test if found min at (0.0, 0.0, 0.0) at starting point (10.0, 10.0, 10.0)
-        out = out && compare(0.0, convergence, 1E-4);
-        out = out && compare(15.0, y1, 1E-4);
-        out = out && compare(0.0, x1[0], 1E-4);
-        out = out && compare(0.0, x1[1], 1E-4);
-        out = out && compare(0.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation forward min_fast convex");
-        }
+        out = out && test(0.0, convergence, 1E-4, "Failed equation forward min_fast convex");
+        out = out && test(15.0, y1, 1E-4, "Failed equation forward min_fast convex");
+        out = out && test(0.0, x1[0], 1E-4, "Failed equation forward min_fast convex");
+        out = out && test(0.0, x1[1], 1E-4, "Failed equation forward min_fast convex");
+        out = out && test(0.0, x1[2], 1E-4, "Failed equation forward min_fast convex");
 
         // Test min
         convergence = eqs[0].min(x0, x1, 20, 1E-4);
@@ -182,31 +153,23 @@ bool test_equation()
         y1 = g1(x1);
 
         // Test if found min at (0.0, 0.0, 0.0) at starting point (10.0, 10.0, 10.0)
-        out = out && compare(0.0, convergence, 1E-4);
-        out = out && compare(15.0, y1, 1E-4);
-        out = out && compare(0.0, x1[0], 1E-4);
-        out = out && compare(0.0, x1[1], 1E-4);
-        out = out && compare(0.0, x1[2], 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation forward min");
-        }
+        out = out && test(0.0, convergence, 1E-4, "Failed equation forward min");
+        out = out && test(15.0, y1, 1E-4, "Failed equation forward min");
+        out = out && test(0.0, x1[0], 1E-4, "Failed equation forward min");
+        out = out && test(0.0, x1[1], 1E-4, "Failed equation forward min");
+        out = out && test(0.0, x1[2], 1E-4, "Failed equation forward min");
 
         // Test hessian calculation
         mml::matrix<double, 3, 3> h = mml::forward<double, 3>::hessian(eqs[0], x0, 1E-3);
-        out = out && compare(2.0, h.get(0, 0), 1E-4);
-        out = out && compare(0.0, h.get(0, 1), 1E-4);
-        out = out && compare(0.0, h.get(0, 2), 1E-4);
-        out = out && compare(0.0, h.get(1, 0), 1E-4);
-        out = out && compare(4.0, h.get(1, 1), 1E-4);
-        out = out && compare(0.0, h.get(1, 2), 1E-4);
-        out = out && compare(0.0, h.get(2, 0), 1E-4);
-        out = out && compare(0.0, h.get(2, 1), 1E-4);
-        out = out && compare(4.0, h.get(2, 2), 1E-4);
-        if (!out)
-        {
-            throw std::runtime_error("Failed equation forward hessian");
-        }
+        out = out && test(2.0, h.get(0, 0), 1E-4, "Failed equation forward hessian");
+        out = out && test(0.0, h.get(0, 1), 1E-4, "Failed equation forward hessian");
+        out = out && test(0.0, h.get(0, 2), 1E-4, "Failed equation forward hessian");
+        out = out && test(0.0, h.get(1, 0), 1E-4, "Failed equation forward hessian");
+        out = out && test(4.0, h.get(1, 1), 1E-4, "Failed equation forward hessian");
+        out = out && test(0.0, h.get(1, 2), 1E-4, "Failed equation forward hessian");
+        out = out && test(0.0, h.get(2, 0), 1E-4, "Failed equation forward hessian");
+        out = out && test(0.0, h.get(2, 1), 1E-4, "Failed equation forward hessian");
+        out = out && test(4.0, h.get(2, 2), 1E-4, "Failed equation forward hessian");
     }
 
     return out;
